@@ -48,6 +48,13 @@ public class PatientService {
         return PatientMapper.toDto(patient.update(command));
     }
 
+    public PatientDto updatePassword(String email, String password) {
+        Patient patient = getPatientByEmail(email);
+
+        patient.updatePassword(password);
+        return PatientMapper.toDto(patient);
+    }
+
     private Patient getPatientByEmail(String email) {
         return repository.findByEmail(email)
                 .orElseThrow(() -> new PatientNotFoundException("Nie znaleziono pacjenta"));

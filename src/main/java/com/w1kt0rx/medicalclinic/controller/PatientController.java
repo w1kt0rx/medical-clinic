@@ -42,4 +42,9 @@ public class PatientController {
     public PatientDto update(@PathVariable String email, @RequestBody UpdatePatientCommand command) {
         return patientService.update(email, command);
     }
+
+    @PatchMapping("/{email}/password")
+    public PatientDto updatePassword(@PathVariable String email, @RequestBody UpdatePatientCommand command) {
+        return patientService.updatePassword(email, command.password());
+    }
 }

@@ -28,4 +28,9 @@ public class Patient {
         this.birthday = command.birthday();
         return this;
     }
+
+    public Patient updatePassword(String password) {
+        this.password = password;
+        return this;
+    }
 }
