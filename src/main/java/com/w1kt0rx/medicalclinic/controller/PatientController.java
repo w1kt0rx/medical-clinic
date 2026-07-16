@@ -1,45 +1,45 @@
 package com.w1kt0rx.medicalclinic.controller;
 
-import com.w1kt0rx.medicalclinic.model.Patient;
+import com.w1kt0rx.medicalclinic.command.CreatePatientCommand;
+import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
+import com.w1kt0rx.medicalclinic.dto.PatientDto;
 import com.w1kt0rx.medicalclinic.service.PatientService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/patients")
 @RequiredArgsConstructor
 public class PatientController {
+
     private final PatientService patientService;
 
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
-    public Patient save(@RequestBody Patient patient) {
-        return patientService.save(patient);
+    public PatientDto create(@RequestBody CreatePatientCommand command) {
+        return patientService.create(command);
     }
 
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{email}")
     public void delete(@PathVariable String email) {
         patientService.delete(email);
     }
 
     @GetMapping
-    public List<Patient> findAll() {
+    public List<PatientDto> findAll() {
         return patientService.findAll();
     }
 
-    @GetMapping("/{patientEmail}")
-    public Patient findByEmail(@PathVariable String patientEmail) {
-        return patientService.findByEmail(patientEmail);
+    @GetMapping("/{email}")
+    public PatientDto findByEmail(@PathVariable String email) {
+        return patientService.findByEmail(email);
     }
 
     @PutMapping("/{email}")
-    public void update(@PathVariable String email, @RequestBody Patient patient) {
-        patientService.update(email, patient);
-    }
-
-    @PatchMapping("/{email}")
-    public void patchPatient(@PathVariable String email, @RequestBody Patient patient) {
-        patientService.patch(email, patient);
+    public PatientDto update(@PathVariable String email, @RequestBody UpdatePatientCommand command) {
+        return patientService.update(email, command);
     }
 }

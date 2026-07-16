@@ -1,18 +1,16 @@
 package com.w1kt0rx.medicalclinic.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-
+import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
 import java.time.LocalDate;
+import lombok.*;
 
-@Getter
 @Setter
+@Getter
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor
 public class Patient {
-    private Long id;
+
     private String email;
     private String password;
     private String idCardNo;
@@ -20,4 +18,14 @@ public class Patient {
     private String lastName;
     private String phoneNumber;
     private LocalDate birthday;
+
+    public Patient update(UpdatePatientCommand command) {
+        this.password = command.password();
+        this.idCardNo = command.idCardNo();
+        this.firstName = command.firstName();
+        this.lastName = command.lastName();
+        this.phoneNumber = command.phoneNumber();
+        this.birthday = command.birthday();
+        return this;
+    }
 }
