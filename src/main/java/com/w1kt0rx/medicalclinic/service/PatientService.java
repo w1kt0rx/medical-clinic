@@ -22,9 +22,7 @@ public class PatientService {
         if (repository.existsByEmail(command.email())) {
             throw new EmailAlreadyInUseException("Email jest już zajęty");
         }
-
         Patient patient = PatientMapper.toEntity(command);
-
         return PatientMapper.toDto(repository.save(patient));
     }
 
@@ -44,15 +42,12 @@ public class PatientService {
 
     public PatientDto update(String email, UpdatePatientCommand command) {
         Patient patient = getPatientByEmail(email);
-
         return PatientMapper.toDto(patient.update(command));
     }
 
-    public PatientDto updatePassword(String email, String password) {
+    public void updatePassword(String email, String password) {
         Patient patient = getPatientByEmail(email);
-
         patient.updatePassword(password);
-        return PatientMapper.toDto(patient);
     }
 
     private Patient getPatientByEmail(String email) {

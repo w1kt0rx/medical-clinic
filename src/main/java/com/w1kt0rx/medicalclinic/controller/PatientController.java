@@ -1,6 +1,7 @@
 package com.w1kt0rx.medicalclinic.controller;
 
 import com.w1kt0rx.medicalclinic.command.CreatePatientCommand;
+import com.w1kt0rx.medicalclinic.command.UpdatePasswordCommand;
 import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
 import com.w1kt0rx.medicalclinic.dto.PatientDto;
 import com.w1kt0rx.medicalclinic.service.PatientService;
@@ -43,8 +44,9 @@ public class PatientController {
         return patientService.update(email, command);
     }
 
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PatchMapping("/{email}/password")
-    public PatientDto updatePassword(@PathVariable String email, @RequestBody UpdatePatientCommand command) {
-        return patientService.updatePassword(email, command.password());
+    public void updatePassword(@PathVariable String email, @RequestBody UpdatePasswordCommand command) {
+        patientService.updatePassword(email, command.password());
     }
 }

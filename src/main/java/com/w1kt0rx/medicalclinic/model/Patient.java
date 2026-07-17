@@ -29,8 +29,7 @@ public class Patient {
         return this;
     }
 
-    public Patient updatePassword(String password) {
+    public void updatePassword(String password) {
         this.password = password;
-        return this;
     }
 }
