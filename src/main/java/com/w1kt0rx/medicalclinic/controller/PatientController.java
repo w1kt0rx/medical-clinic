@@ -8,6 +8,7 @@ import com.w1kt0rx.medicalclinic.service.PatientService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,36 +18,35 @@ public class PatientController {
 
     private final PatientService patientService;
 
-    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
-    public PatientDto create(@RequestBody CreatePatientCommand command) {
-        return patientService.create(command);
+    public ResponseEntity<PatientDto> create(@RequestBody CreatePatientCommand command) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(patientService.create(command));
     }
 
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{email}")
-    public void delete(@PathVariable String email) {
+    public ResponseEntity<Void> delete(@PathVariable String email) {
         patientService.delete(email);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     @GetMapping
-    public List<PatientDto> findAll() {
-        return patientService.findAll();
+    public ResponseEntity<List<PatientDto>> findAll() {
+        return ResponseEntity.ok(patientService.findAll());
     }
 
     @GetMapping("/{email}")
-    public PatientDto findByEmail(@PathVariable String email) {
-        return patientService.findByEmail(email);
+    public ResponseEntity<PatientDto> findByEmail(@PathVariable String email) {
+        return ResponseEntity.ok(patientService.findByEmail(email));
     }
 
     @PutMapping("/{email}")
-    public PatientDto update(@PathVariable String email, @RequestBody UpdatePatientCommand command) {
-        return patientService.update(email, command);
+    public ResponseEntity<PatientDto> update(@PathVariable String email, @RequestBody UpdatePatientCommand command) {
+        return ResponseEntity.ok(patientService.update(email, command));
     }
 
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PatchMapping("/{email}/password")
-    public void updatePassword(@PathVariable String email, @RequestBody UpdatePasswordCommand command) {
+    public ResponseEntity<Void> updatePassword(@PathVariable String email, @RequestBody UpdatePasswordCommand command) {
         patientService.updatePassword(email, command.password());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

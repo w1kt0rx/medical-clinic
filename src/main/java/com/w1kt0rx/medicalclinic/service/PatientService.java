@@ -8,8 +8,11 @@ import com.w1kt0rx.medicalclinic.exception.PatientNotFoundException;
 import com.w1kt0rx.medicalclinic.mapper.PatientMapper;
 import com.w1kt0rx.medicalclinic.model.Patient;
 import com.w1kt0rx.medicalclinic.repository.PatientRepository;
+
 import java.util.List;
+
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,13 +20,14 @@ import org.springframework.stereotype.Service;
 public class PatientService {
 
     private final PatientRepository repository;
+    private final PatientMapper mapper;
 
     public PatientDto create(CreatePatientCommand command) {
         if (repository.existsByEmail(command.email())) {
-            throw new EmailAlreadyInUseException("Email jest już zajęty");
+            throw new EmailAlreadyInUseException(String.format("Email - %s - jest już w uzyciu", command.email()), HttpStatus.CONFLICT);
         }
-        Patient patient = PatientMapper.toEntity(command);
-        return PatientMapper.toDto(repository.save(patient));
+        Patient patient = mapper.toEntity(command);
+        return mapper.toDto(repository.save(patient));
     }
 
     public void delete(String email) {
@@ -32,17 +36,17 @@ public class PatientService {
 
     public List<PatientDto> findAll() {
         return repository.findAll().stream()
-                .map(PatientMapper::toDto)
+                .map(mapper::toDto)
                 .toList();
     }
 
     public PatientDto findByEmail(String email) {
-        return PatientMapper.toDto(getPatientByEmail(email));
+        return mapper.toDto(getPatientByEmail(email));
     }
 
     public PatientDto update(String email, UpdatePatientCommand command) {
         Patient patient = getPatientByEmail(email);
-        return PatientMapper.toDto(patient.update(command));
+        return mapper.toDto(patient.update(command));
     }
 
     public void updatePassword(String email, String password) {
@@ -52,6 +56,6 @@ public class PatientService {
 
     private Patient getPatientByEmail(String email) {
         return repository.findByEmail(email)
-                .orElseThrow(() -> new PatientNotFoundException("Nie znaleziono pacjenta"));
+                .orElseThrow(() -> new PatientNotFoundException(String.format("Nie znaleziono pacjeta o emailu: %s", email), HttpStatus.NOT_FOUND) );
     }
 }
