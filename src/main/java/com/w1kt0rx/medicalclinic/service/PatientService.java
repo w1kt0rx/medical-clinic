@@ -3,14 +3,16 @@ package com.w1kt0rx.medicalclinic.service;
 import com.w1kt0rx.medicalclinic.command.CreatePatientCommand;
 import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
 import com.w1kt0rx.medicalclinic.dto.PatientDto;
-import com.w1kt0rx.medicalclinic.exception.EmailAlreadyInUseException;
 import com.w1kt0rx.medicalclinic.exception.PatientNotFoundException;
+import com.w1kt0rx.medicalclinic.exception.UserNotFoundException;
 import com.w1kt0rx.medicalclinic.mapper.PatientMapper;
 import com.w1kt0rx.medicalclinic.model.Patient;
+import com.w1kt0rx.medicalclinic.model.User;
 import com.w1kt0rx.medicalclinic.repository.PatientRepository;
 
 import java.util.List;
 
+import com.w1kt0rx.medicalclinic.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,43 +21,45 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PatientService {
 
-    private final PatientRepository repository;
+    private final PatientRepository patientRepository;
+    private final UserRepository userRepository;
     private final PatientMapper mapper;
 
     public PatientDto create(CreatePatientCommand command) {
-        if (repository.existsByEmail(command.email())) {
-            throw new EmailAlreadyInUseException(String.format("Email - %s - jest już w uzyciu", command.email()), HttpStatus.CONFLICT);
-        }
-        Patient patient = mapper.toEntity(command);
-        return mapper.toDto(repository.save(patient));
+
+        User user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new UserNotFoundException("Nie znaleziono użytkownika", HttpStatus.NOT_FOUND));
+
+        Patient patient = Patient.builder()
+                .idCardNo(command.idCardNo())
+                .birthday(command.birthday())
+                .user(user)
+                .build();
+
+        return mapper.toDto(patientRepository.save(patient));
     }
 
-    public void delete(String email) {
-        repository.delete(getPatientByEmail(email));
+    public void delete(Long id) {
+        patientRepository.delete(getPatientById(id));
     }
 
     public List<PatientDto> findAll() {
-        return repository.findAll().stream()
+        return patientRepository.findAll().stream()
                 .map(mapper::toDto)
                 .toList();
     }
 
-    public PatientDto findByEmail(String email) {
-        return mapper.toDto(getPatientByEmail(email));
+    public PatientDto findById(Long id) {
+        return mapper.toDto(getPatientById(id));
     }
 
-    public PatientDto update(String email, UpdatePatientCommand command) {
-        Patient patient = getPatientByEmail(email);
-        return mapper.toDto(patient.update(command));
+    public PatientDto update(Long id, UpdatePatientCommand command) {
+        Patient patient = getPatientById(id);
+        return mapper.toDto(patientRepository.save(patient.update(command)));
     }
 
-    public void updatePassword(String email, String password) {
-        Patient patient = getPatientByEmail(email);
-        patient.updatePassword(password);
-    }
-
-    private Patient getPatientByEmail(String email) {
-        return repository.findByEmail(email)
-                .orElseThrow(() -> new PatientNotFoundException(String.format("Nie znaleziono pacjeta o emailu: %s", email), HttpStatus.NOT_FOUND) );
+    private Patient getPatientById(Long id) {
+        return patientRepository.findById(id)
+                .orElseThrow(() -> new PatientNotFoundException(String.format("Nie znaleziono pacjeta o id: %s", id), HttpStatus.NOT_FOUND));
     }
 }
