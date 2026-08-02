@@ -6,8 +6,7 @@ import com.w1kt0rx.medicalclinic.model.Patient;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring",
-        uses = UserMapper.class)
+@Mapper(componentModel = "spring")
 public interface PatientMapper {
 
     @Mapping(target = "id", ignore = true)

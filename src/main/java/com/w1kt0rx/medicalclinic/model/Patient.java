@@ -8,10 +8,10 @@ import lombok.*;
 
 @Setter
 @Getter
-@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
+@Table(name = "Patient")
 public class Patient {
 
     @Id

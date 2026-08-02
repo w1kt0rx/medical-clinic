@@ -12,12 +12,13 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "users")
+@Table(name = "Users")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(unique = true, nullable = false)
     private String email;
     private String password;
     private String firstName;
@@ -26,6 +27,10 @@ public class User {
     @OneToOne(mappedBy = "user",
             cascade = CascadeType.ALL)
     private Patient patient;
+
+    @OneToOne(mappedBy = "user",
+            cascade = CascadeType.ALL)
+    private Doctor doctor;
 
     public User update(UpdateUserCommand command) {
         this.firstName = command.firstName();

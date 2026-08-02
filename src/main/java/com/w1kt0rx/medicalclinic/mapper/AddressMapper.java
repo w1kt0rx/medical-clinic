@@ -1,0 +1,15 @@
+package com.w1kt0rx.medicalclinic.mapper;
+
+import com.w1kt0rx.medicalclinic.command.CreateAddressCommand;
+import com.w1kt0rx.medicalclinic.dto.AddressDto;
+import com.w1kt0rx.medicalclinic.model.Address;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+
+@Mapper(componentModel = "spring",
+        uses = ClinicMapper.class)
+public interface AddressMapper {
+    public Address toEntity(CreateAddressCommand command);
+
+    public AddressDto toDto(Address address);
+}

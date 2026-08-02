@@ -30,11 +30,8 @@ public class PatientService {
         User user = userRepository.findById(command.userId())
                 .orElseThrow(() -> new UserNotFoundException("Nie znaleziono użytkownika", HttpStatus.NOT_FOUND));
 
-        Patient patient = Patient.builder()
-                .idCardNo(command.idCardNo())
-                .birthday(command.birthday())
-                .user(user)
-                .build();
+        Patient patient = mapper.toEntity(command);
+        patient.setUser(user);
 
         return mapper.toDto(patientRepository.save(patient));
     }

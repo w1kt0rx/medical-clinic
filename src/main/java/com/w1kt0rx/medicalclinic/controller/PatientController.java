@@ -90,7 +90,7 @@ public class PatientController {
     })
     @Tag(name = "Otrzymaj konkretnego pacjenta")
     @GetMapping("/{id}")
-    public ResponseEntity<PatientDto> findByEmail(@PathVariable Long id) {
+    public ResponseEntity<PatientDto> findById(@PathVariable Long id) {
         return ResponseEntity.ok(patientService.findById(id));
     }
 
