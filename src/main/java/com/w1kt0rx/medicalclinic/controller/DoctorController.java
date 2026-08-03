@@ -29,7 +29,7 @@ public class DoctorController {
     }
 
     @GetMapping
-    public ResponseEntity<List<DoctorDto>> findAll(){
+    public ResponseEntity<List<DoctorDto>> findAll() {
         return ResponseEntity.ok(doctorService.findAll());
     }
 

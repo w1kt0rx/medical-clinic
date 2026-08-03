@@ -26,13 +26,10 @@ public class PatientService {
     private final PatientMapper mapper;
 
     public PatientDto create(CreatePatientCommand command) {
-
         User user = userRepository.findById(command.userId())
                 .orElseThrow(() -> new UserNotFoundException("Nie znaleziono użytkownika", HttpStatus.NOT_FOUND));
-
         Patient patient = mapper.toEntity(command);
         patient.setUser(user);
-
         return mapper.toDto(patientRepository.save(patient));
     }
 

@@ -19,7 +19,7 @@ public class Address {
     private String street;
     private String houseNumber;
     @OneToOne(mappedBy = "address",
-    cascade = CascadeType.ALL)
+            cascade = CascadeType.ALL)
     private Clinic clinic;
 
     public Address update(UpdateAddressCommand command) {

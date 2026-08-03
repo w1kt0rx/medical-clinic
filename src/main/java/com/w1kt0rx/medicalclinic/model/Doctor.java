@@ -29,8 +29,7 @@ public class Doctor {
     )
     private Set<Clinic> clinics = new HashSet<>();
 
-
-    public Doctor update(UpdateDoctorCommand command){
+    public Doctor update(UpdateDoctorCommand command) {
         this.specialization = command.specialization();
         return this;
     }

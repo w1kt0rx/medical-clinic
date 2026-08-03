@@ -1,11 +1,8 @@
 package com.w1kt0rx.medicalclinic.controller;
 
 import com.w1kt0rx.medicalclinic.command.CreateAddressCommand;
-import com.w1kt0rx.medicalclinic.command.CreateDoctorCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateAddressCommand;
-import com.w1kt0rx.medicalclinic.command.UpdateDoctorCommand;
 import com.w1kt0rx.medicalclinic.dto.AddressDto;
-import com.w1kt0rx.medicalclinic.dto.DoctorDto;
 import com.w1kt0rx.medicalclinic.service.AddressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,31 +15,31 @@ import java.util.List;
 @RestController
 @RequestMapping("/addresses")
 public class AddressController {
-        private final AddressService addressService;
+    private final AddressService addressService;
 
-        @PostMapping
-        public ResponseEntity<AddressDto> create(@RequestBody CreateAddressCommand command) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(addressService.create(command));
-        }
+    @PostMapping
+    public ResponseEntity<AddressDto> create(@RequestBody CreateAddressCommand command) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(addressService.create(command));
+    }
 
-        @DeleteMapping("/{id}")
-        public ResponseEntity<Void> delete(@PathVariable Long id) {
-            addressService.delete(id);
-            return ResponseEntity.noContent().build();
-        }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        addressService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 
-        @GetMapping
-        public ResponseEntity<List<AddressDto>> findAll(){
-            return ResponseEntity.ok(addressService.findAll());
-        }
+    @GetMapping
+    public ResponseEntity<List<AddressDto>> findAll() {
+        return ResponseEntity.ok(addressService.findAll());
+    }
 
-        @GetMapping("/{id}")
-        public ResponseEntity<AddressDto> findById(@PathVariable Long id) {
-            return ResponseEntity.ok(addressService.findById(id));
-        }
+    @GetMapping("/{id}")
+    public ResponseEntity<AddressDto> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(addressService.findById(id));
+    }
 
-        @PutMapping("/{id}")
-        public ResponseEntity<AddressDto> update(@PathVariable Long id, @RequestBody UpdateAddressCommand command) {
-            return ResponseEntity.ok(addressService.update(id, command));
-        }
+    @PutMapping("/{id}")
+    public ResponseEntity<AddressDto> update(@PathVariable Long id, @RequestBody UpdateAddressCommand command) {
+        return ResponseEntity.ok(addressService.update(id, command));
+    }
 }

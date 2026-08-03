@@ -120,7 +120,6 @@ public class PatientController {
                                     }
                                     """)))
             @RequestBody UpdatePatientCommand command) {
-
         return ResponseEntity.ok(patientService.update(id, command));
     }
 }

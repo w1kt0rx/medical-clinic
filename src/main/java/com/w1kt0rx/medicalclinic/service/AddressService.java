@@ -18,7 +18,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AddressService {
     private final AddressRepository addressRepository;
-    private final ClinicRepository clinicRepository;
     private final AddressMapper mapper;
 
     public AddressDto create(CreateAddressCommand command) {

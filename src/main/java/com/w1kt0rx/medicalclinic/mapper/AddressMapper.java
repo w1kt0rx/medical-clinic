@@ -4,7 +4,6 @@ import com.w1kt0rx.medicalclinic.command.CreateAddressCommand;
 import com.w1kt0rx.medicalclinic.dto.AddressDto;
 import com.w1kt0rx.medicalclinic.model.Address;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring",
         uses = ClinicMapper.class)

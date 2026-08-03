@@ -23,7 +23,7 @@ public class Clinic {
     @JoinColumn(name = "address_id", nullable = false, unique = true)
     private Address address;
     @ManyToMany(mappedBy = "clinics")
-    private Set<Doctor> doctors= new HashSet<>();
+    private Set<Doctor> doctors = new HashSet<>();
 
     public Clinic update(UpdateClinicCommand command) {
         this.name = command.name();

@@ -3,12 +3,10 @@ package com.w1kt0rx.medicalclinic.service;
 import com.w1kt0rx.medicalclinic.command.CreateClinicCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateClinicCommand;
 import com.w1kt0rx.medicalclinic.dto.ClinicDto;
-import com.w1kt0rx.medicalclinic.exception.AddressNotFoundException;
 import com.w1kt0rx.medicalclinic.exception.ClinicNotFoundException;
 import com.w1kt0rx.medicalclinic.mapper.ClinicMapper;
 import com.w1kt0rx.medicalclinic.model.Address;
 import com.w1kt0rx.medicalclinic.model.Clinic;
-import com.w1kt0rx.medicalclinic.model.Doctor;
 import com.w1kt0rx.medicalclinic.repository.AddressRepository;
 import com.w1kt0rx.medicalclinic.repository.ClinicRepository;
 import com.w1kt0rx.medicalclinic.repository.DoctorRepository;
@@ -16,9 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @RequiredArgsConstructor
 @Service
