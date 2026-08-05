@@ -4,7 +4,9 @@ import com.w1kt0rx.medicalclinic.command.UpdateDoctorCommand;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Setter
@@ -28,9 +30,11 @@ public class Doctor {
             inverseJoinColumns = {@JoinColumn(name = "clinic_id")}
     )
     private Set<Clinic> clinics = new HashSet<>();
-
-    public Doctor update(UpdateDoctorCommand command) {
+    @OneToMany(mappedBy = "doctor")
+    private List<Visit> visits = new ArrayList<>();
+    public Doctor update(UpdateDoctorCommand command, Set<Clinic> clinics) {
         this.specialization = command.specialization();
+        this.clinics = clinics;
         return this;
     }
 }

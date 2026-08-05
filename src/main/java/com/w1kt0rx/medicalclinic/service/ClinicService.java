@@ -3,13 +3,12 @@ package com.w1kt0rx.medicalclinic.service;
 import com.w1kt0rx.medicalclinic.command.CreateClinicCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateClinicCommand;
 import com.w1kt0rx.medicalclinic.dto.ClinicDto;
+import com.w1kt0rx.medicalclinic.exception.ClinicAlreadyExistsException;
 import com.w1kt0rx.medicalclinic.exception.ClinicNotFoundException;
 import com.w1kt0rx.medicalclinic.mapper.ClinicMapper;
 import com.w1kt0rx.medicalclinic.model.Address;
 import com.w1kt0rx.medicalclinic.model.Clinic;
-import com.w1kt0rx.medicalclinic.repository.AddressRepository;
 import com.w1kt0rx.medicalclinic.repository.ClinicRepository;
-import com.w1kt0rx.medicalclinic.repository.DoctorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,14 +20,13 @@ import java.util.List;
 public class ClinicService {
 
     private final ClinicRepository clinicRepository;
-    private final AddressRepository addressRepository;
-    private final DoctorRepository doctorRepository;
     private final ClinicMapper mapper;
 
     public ClinicDto create(CreateClinicCommand command) {
-        Address address = addressRepository.getAddressesById(command.addressId());
+        if(clinicRepository.existsByName(command.name())) {
+            throw new ClinicAlreadyExistsException("Clinic already exists", HttpStatus.CONFLICT);
+        }
         Clinic clinic = mapper.toEntity(command);
-        clinic.setAddress(address);
         return mapper.toDto(clinicRepository.save(clinic));
     }
 
@@ -53,6 +51,6 @@ public class ClinicService {
 
     private Clinic getClinicById(Long id) {
         return clinicRepository.findById(id)
-                .orElseThrow(() -> new ClinicNotFoundException(String.format("Nie znaleziono kliniki o id: %d", id), HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new ClinicNotFoundException(String.format("Couldn't find clinic with id: %d", id), HttpStatus.NOT_FOUND));
     }
 }

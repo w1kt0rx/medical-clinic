@@ -27,6 +27,7 @@ public class Clinic {
 
     public Clinic update(UpdateClinicCommand command) {
         this.name = command.name();
+        address.update(command);
         return this;
     }
 }

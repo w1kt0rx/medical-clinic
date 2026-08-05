@@ -2,6 +2,8 @@ package com.w1kt0rx.medicalclinic.model;
 
 import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -22,7 +24,8 @@ public class Patient {
     @OneToOne
     @JoinColumn(name = "user_id", unique = true)
     private User user;
-
+    @OneToMany(mappedBy = "patient")
+    private List<Visit> visits = new ArrayList<>();
     public Patient update(UpdatePatientCommand command) {
         this.idCardNo = command.idCardNo();
         this.birthday = command.birthday();

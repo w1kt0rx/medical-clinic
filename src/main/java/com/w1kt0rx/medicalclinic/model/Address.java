@@ -1,6 +1,6 @@
 package com.w1kt0rx.medicalclinic.model;
 
-import com.w1kt0rx.medicalclinic.command.UpdateAddressCommand;
+import com.w1kt0rx.medicalclinic.command.UpdateClinicCommand;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,7 +22,7 @@ public class Address {
             cascade = CascadeType.ALL)
     private Clinic clinic;
 
-    public Address update(UpdateAddressCommand command) {
+    public Address update(UpdateClinicCommand command) {
         this.city = command.city();
         this.postalCode = command.postalCode();
         this.street = command.street();

@@ -4,6 +4,8 @@ import java.time.LocalDate;
 
 public record PatientDto(
         Long id,
-        LocalDate birthday
+        String idCardNo,
+        LocalDate birthday,
+        UserDto user
 ) {
 }

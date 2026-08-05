@@ -6,9 +6,12 @@ import com.w1kt0rx.medicalclinic.model.Patient;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring",
+        uses = UserMapper.class)
 public interface PatientMapper {
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "user", ignore = true)
+    @Mapping(target = "visits", ignore = true)
     Patient toEntity(CreatePatientCommand command);
 
     PatientDto toDto(Patient patient);

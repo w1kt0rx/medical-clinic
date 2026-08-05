@@ -42,4 +42,20 @@ public class DoctorController {
     public ResponseEntity<DoctorDto> update(@PathVariable Long id, @RequestBody UpdateDoctorCommand command) {
         return ResponseEntity.ok(doctorService.update(id, command));
     }
+
+    @PostMapping("/{doctorId}/clinics/{clinicId}")
+    public DoctorDto addClinic(
+            @PathVariable Long doctorId,
+            @PathVariable Long clinicId) {
+
+        return doctorService.addClinic(doctorId, clinicId);
+    }
+
+    @DeleteMapping("/{doctorId}/clinics/{clinicId}")
+    public DoctorDto removeClinic(
+            @PathVariable Long doctorId,
+            @PathVariable Long clinicId) {
+
+        return doctorService.removeClinic(doctorId, clinicId);
+    }
 }
