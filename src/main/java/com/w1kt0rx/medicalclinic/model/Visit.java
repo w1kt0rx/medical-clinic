@@ -14,7 +14,8 @@ public class Visit {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private LocalDateTime visitDate;
+    private LocalDateTime startDate;
+    private LocalDateTime finishDate;
     @ManyToOne
     @JoinColumn(name = "doctor_id")
     private Doctor doctor;

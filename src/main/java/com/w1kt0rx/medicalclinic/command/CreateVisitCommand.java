@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public record CreateVisitCommand(
         Long doctorId,
-        LocalDateTime visitDate
+        LocalDateTime startDate,
+        LocalDateTime finishDate
 ) {
 }

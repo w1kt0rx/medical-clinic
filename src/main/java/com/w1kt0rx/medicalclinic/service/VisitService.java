@@ -27,16 +27,16 @@ public class VisitService {
     private final VisitMapper mapper;
 
     public VisitDto create(CreateVisitCommand command) {
-        if (command.visitDate().isBefore(LocalDateTime.now())) {
+        if (command.startDate().isBefore(LocalDateTime.now())) {
             throw new IllegalDateException("Cannot create visit in the past", HttpStatus.CONFLICT);
         }
-        if (command.visitDate().getMinute() != 0) {
+        if (command.startDate().getMinute() != 0) {
             throw new IllegalDateException("Visit can only start at the top of the hour", HttpStatus.CONFLICT);
         }
         Doctor doctor = doctorRepository.findById(command.doctorId())
                 .orElseThrow(() -> new DoctorNotFoundException(String.format("Couldn't find a doctor with id: %s", command.doctorId()), HttpStatus.NOT_FOUND));
-        if (visitRepository.existsByDoctorIdAndVisitDate(command.doctorId(), command.visitDate())) {
-            throw new VisitAlreadyExistsException("Doctor already has visit at this hour", HttpStatus.CONFLICT);
+        if (visitRepository.existsByDoctorIdAndStartDateBeforeAndFinishDateAfter(doctor.getId(), command.finishDate(), command.startDate())) {
+                throw new VisitOverlapException("Doctor has visit booked on this term", HttpStatus.CONFLICT);
         }
         Visit visit = mapper.toEntity(command);
         visit.setDoctor(doctor);
@@ -46,7 +46,7 @@ public class VisitService {
     public VisitDto registerPatient(Long visitId, RegisterPatientForVisitCommand command) {
         Visit visit = visitRepository.findById(visitId)
                 .orElseThrow(() -> new VisitNotFoundException(String.format("Couldn't find a visit with id: %s", visitId), HttpStatus.NOT_FOUND));
-        if (visit.getVisitDate().isBefore(LocalDateTime.now())) {
+        if (visit.getStartDate().isBefore(LocalDateTime.now())) {
             throw new IllegalDateException("Cannot book visit that was in the past", HttpStatus.CONFLICT);
         }
         if(visit.getPatient() != null) {
