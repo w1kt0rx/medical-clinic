@@ -3,6 +3,7 @@ package com.w1kt0rx.medicalclinic.service;
 import com.w1kt0rx.medicalclinic.command.CreatePatientCommand;
 import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
 import com.w1kt0rx.medicalclinic.dto.PatientDto;
+import com.w1kt0rx.medicalclinic.exception.PatientHasScheduledVisitsException;
 import com.w1kt0rx.medicalclinic.exception.PatientNotFoundException;
 import com.w1kt0rx.medicalclinic.exception.UserNotFoundException;
 import com.w1kt0rx.medicalclinic.mapper.PatientMapper;
@@ -13,6 +14,7 @@ import com.w1kt0rx.medicalclinic.repository.PatientRepository;
 import java.util.List;
 
 import com.w1kt0rx.medicalclinic.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,16 +27,22 @@ public class PatientService {
     private final UserRepository userRepository;
     private final PatientMapper mapper;
 
+    @Transactional
     public PatientDto create(CreatePatientCommand command) {
         User user = userRepository.findById(command.userId())
-                .orElseThrow(() -> new UserNotFoundException("Nie znaleziono użytkownika", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new UserNotFoundException(command.userId()));
         Patient patient = mapper.toEntity(command);
         patient.setUser(user);
         return mapper.toDto(patientRepository.save(patient));
     }
 
+    @Transactional
     public void delete(Long id) {
-        patientRepository.delete(getPatientById(id));
+        Patient patient = getPatientById(id);
+        if (!patient.getVisits().isEmpty()) {
+            throw new PatientHasScheduledVisitsException(id);
+        }
+        patientRepository.delete(patient);
     }
 
     public List<PatientDto> findAll() {
@@ -47,6 +55,7 @@ public class PatientService {
         return mapper.toDto(getPatientById(id));
     }
 
+    @Transactional
     public PatientDto update(Long id, UpdatePatientCommand command) {
         Patient patient = getPatientById(id);
         return mapper.toDto(patientRepository.save(patient.update(command)));
@@ -54,6 +63,6 @@ public class PatientService {
 
     private Patient getPatientById(Long id) {
         return patientRepository.findById(id)
-                .orElseThrow(() -> new PatientNotFoundException(String.format("Nie znaleziono pacjeta o id: %s", id), HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new PatientNotFoundException(id));
     }
 }

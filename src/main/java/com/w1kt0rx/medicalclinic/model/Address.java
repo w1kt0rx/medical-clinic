@@ -8,9 +8,11 @@ import lombok.*;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "Address")
 public class Address {
+    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -18,8 +20,7 @@ public class Address {
     private String postalCode;
     private String street;
     private String houseNumber;
-    @OneToOne(mappedBy = "address",
-            cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "address")
     private Clinic clinic;
 
     public Address update(UpdateClinicCommand command) {

@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public class UserNotFoundException extends MedicalClinicException {
 
-    public UserNotFoundException(String message, HttpStatus status) {
-        super(message, status);
+    public UserNotFoundException(Long id) {
+        super("Couldn't find user with id: " + id, HttpStatus.NOT_FOUND);
     }
 }

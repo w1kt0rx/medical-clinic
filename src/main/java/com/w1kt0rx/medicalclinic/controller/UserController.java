@@ -6,6 +6,8 @@ import com.w1kt0rx.medicalclinic.command.UpdateUserCommand;
 import com.w1kt0rx.medicalclinic.dto.UserDto;
 import com.w1kt0rx.medicalclinic.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,36 +24,36 @@ import java.util.List;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@Tag(name = "User Management", description = "Endpoints for managing system users and authentication details")
 public class UserController {
 
     private final UserService userService;
 
-    @Operation(summary = "Stworz nowego uzytkownika")
+    @Operation(summary = "Create a new user", description = "Registers a new user in the system.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Udalo sie utworzyc uzytkownika",
+            @ApiResponse(responseCode = "201", description = "User created successfully",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = UserDto.class))),
-            @ApiResponse(responseCode = "400", description = "Zle dane requesta",
+            @ApiResponse(responseCode = "400", description = "Invalid input data provided",
                     content = @Content),
-            @ApiResponse(responseCode = "409", description = "Email jest juz w uzyciu",
+            @ApiResponse(responseCode = "409", description = "Email is already in use",
                     content = @Content)
     })
-    @Tag(name = "Stworz nowego uzytkownika")
     @PostMapping
     public ResponseEntity<UserDto> create(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Dane uzytkownika",
+                    description = "User creation data",
                     required = true,
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = CreateUserCommand.class),
                             examples = @ExampleObject(value = """
                                     {
-                                      "email": "Jacek@gmail.com",
+                                      "email": "jacek@gmail.com",
                                       "password": "password!",
                                       "firstName": "Jacek",
                                       "lastName": "Palcek",
-                                      "phoneNumber": "123456789",
+                                      "phoneNumber": "123456789"
                                     }
                                     """)))
             @RequestBody CreateUserCommand command) {
@@ -59,69 +61,71 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.create(command));
     }
 
-    @Operation(summary = "Usun uzytkownika poprzez email")
+    @Operation(summary = "Delete user by email", description = "Removes a user from the system by their email address.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Uzytkownik usunięty"),
-            @ApiResponse(responseCode = "404", description = "Uzytkownik nie znaleziony",
+            @ApiResponse(responseCode = "204", description = "User deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "User not found",
                     content = @Content)
     })
-    @Tag(name = "Usun uzytkownika")
     @DeleteMapping("/{email}")
-    public ResponseEntity<Void> delete(@PathVariable String email) {
+    public ResponseEntity<Void> delete(
+            @Parameter(description = "Email address of the user to delete", example = "jacek@gmail.com")
+            @PathVariable String email) {
         userService.delete(email);
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Zwroc wszystkich uzytkownikow")
+    @Operation(summary = "Get all users", description = "Retrieves a list of all registered users.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista uzytkownikow",
+            @ApiResponse(responseCode = "200", description = "List of users retrieved successfully",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = UserDto.class)))
+                            array = @ArraySchema(schema = @Schema(implementation = UserDto.class))))
     })
-    @Tag(name = "Otrzymaj wszystkich uzytkownikow")
     @GetMapping
     public ResponseEntity<List<UserDto>> findAll() {
         return ResponseEntity.ok(userService.findAll());
     }
 
-    @Operation(summary = "Zwroc uzytkownika poprzez email")
+    @Operation(summary = "Get user by email", description = "Retrieves details of a specific user by their email address.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Uzytkownik znaleziony",
+            @ApiResponse(responseCode = "200", description = "User found",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = UserDto.class))),
-            @ApiResponse(responseCode = "404", description = "Uzytkownik nie znaleziony",
+            @ApiResponse(responseCode = "404", description = "User not found",
                     content = @Content)
     })
-    @Tag(name = "Otrzymaj konkretnego uzytkownika")
     @GetMapping("/{email}")
-    public ResponseEntity<UserDto> findByEmail(@PathVariable String email) {
+    public ResponseEntity<UserDto> findByEmail(
+            @Parameter(description = "Email address of the user to retrieve", example = "jacek@gmail.com")
+            @PathVariable String email) {
         return ResponseEntity.ok(userService.findByEmail(email));
     }
 
-    @Operation(summary = "Zaaktualizowanie danych uzytkownika")
+    @Operation(summary = "Update user details", description = "Updates profile details for an existing user identified by email.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Uzytkownik zaaktualizowany",
+            @ApiResponse(responseCode = "200", description = "User updated successfully",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = UserDto.class))),
-            @ApiResponse(responseCode = "400", description = "Niepoprawne żądanie",
+            @ApiResponse(responseCode = "400", description = "Invalid input data provided",
                     content = @Content),
-            @ApiResponse(responseCode = "404", description = "Uzytkownik nie znaleziony",
+            @ApiResponse(responseCode = "404", description = "User not found",
                     content = @Content)
     })
-    @Tag(name = "Zaaktualizuj uzytkownika")
     @PutMapping("/{email}")
     public ResponseEntity<UserDto> update(
+            @Parameter(description = "Email address of the user to update", example = "jacek@gmail.com")
             @PathVariable String email,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Zaaktualizuj dane uzytkownika",
+                    description = "Updated user profile details",
                     required = true,
                     content = @Content(
+                            mediaType = "application/json",
                             schema = @Schema(implementation = UpdateUserCommand.class),
                             examples = @ExampleObject(value = """
                                     {
                                       "firstName": "Jan",
                                       "lastName": "Placek",
-                                      "phoneNumber": "987654321",
+                                      "phoneNumber": "987654321"
                                     }
                                     """)))
             @RequestBody UpdateUserCommand command) {
@@ -129,24 +133,27 @@ public class UserController {
         return ResponseEntity.ok(userService.update(email, command));
     }
 
-    @Operation(summary = "Zaaktualizuj haslo uzytkownika")
+    @Operation(summary = "Update user password", description = "Updates password for a user identified by email.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Haslo zaaktualizowane"),
-            @ApiResponse(responseCode = "404", description = "Uzytkownik nie znaleziony",
+            @ApiResponse(responseCode = "204", description = "Password updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid password format provided",
+                    content = @Content),
+            @ApiResponse(responseCode = "404", description = "User not found",
                     content = @Content)
     })
-    @Tag(name = "Zaaktualizuj haslo uzytkownika")
     @PatchMapping("/{email}/password")
     public ResponseEntity<Void> updatePassword(
+            @Parameter(description = "Email address of the user whose password will be updated", example = "jacek@gmail.com")
             @PathVariable String email,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Nowe haslo",
+                    description = "New password payload",
                     required = true,
                     content = @Content(
+                            mediaType = "application/json",
                             schema = @Schema(implementation = UpdatePasswordCommand.class),
                             examples = @ExampleObject(value = """
                                     {
-                                      "password": "NoweHaslo123"
+                                      "password": "NewPassword123!"
                                     }
                                     """)))
             @RequestBody UpdatePasswordCommand command) {

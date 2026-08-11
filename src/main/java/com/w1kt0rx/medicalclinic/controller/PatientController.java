@@ -5,6 +5,8 @@ import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
 import com.w1kt0rx.medicalclinic.dto.PatientDto;
 import com.w1kt0rx.medicalclinic.service.PatientService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,25 +23,25 @@ import java.util.List;
 @RestController
 @RequestMapping("/patients")
 @RequiredArgsConstructor
+@Tag(name = "Patient Management", description = "Endpoints for managing patients")
 public class PatientController {
 
     private final PatientService patientService;
 
-    @Operation(summary = "Stworz nowego pacjenta")
+    @Operation(summary = "Create a new patient", description = "Registers a new patient in the system.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Udalo sie utworzyc pacjenta",
+            @ApiResponse(responseCode = "201", description = "Patient created successfully",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = PatientDto.class))),
-            @ApiResponse(responseCode = "400", description = "Zle dane requesta",
+            @ApiResponse(responseCode = "400", description = "Invalid input data provided",
                     content = @Content),
-            @ApiResponse(responseCode = "409", description = "Email jest juz w uzyciu",
+            @ApiResponse(responseCode = "409", description = "Email is already in use",
                     content = @Content)
     })
-    @Tag(name = "Stworz nowego pacjenta")
     @PostMapping
     public ResponseEntity<PatientDto> create(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Dane pacjenta",
+                    description = "Patient registration data",
                     required = true,
                     content = @Content(
                             mediaType = "application/json",
@@ -55,67 +57,69 @@ public class PatientController {
         return ResponseEntity.status(HttpStatus.CREATED).body(patientService.create(command));
     }
 
-    @Operation(summary = "Usun pacjenta poprzez id")
+    @Operation(summary = "Delete patient by ID", description = "Removes a patient from the system by their unique ID.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Pacjent usunięty"),
-            @ApiResponse(responseCode = "404", description = "Pacjent nie znaleziony",
+            @ApiResponse(responseCode = "204", description = "Patient deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Patient not found",
                     content = @Content)
     })
-    @Tag(name = "Usun pacjenta")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(
+            @Parameter(description = "ID of the patient to be deleted", example = "1")
+            @PathVariable Long id) {
         patientService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Zwroc wszystkich pacjentow")
+    @Operation(summary = "Get all patients", description = "Retrieves a list of all registered patients.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista pacjentow",
+            @ApiResponse(responseCode = "200", description = "List of patients retrieved successfully",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = PatientDto.class)))
+                            array = @ArraySchema(schema = @Schema(implementation = PatientDto.class))))
     })
-    @Tag(name = "Otrzymaj wszystkich pacjentow")
     @GetMapping
     public ResponseEntity<List<PatientDto>> findAll() {
         return ResponseEntity.ok(patientService.findAll());
     }
 
-    @Operation(summary = "Zwroc pacjenta poprzez id")
+    @Operation(summary = "Get patient by ID", description = "Retrieves details of a specific patient by ID.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Pacjent znaleziony",
+            @ApiResponse(responseCode = "200", description = "Patient found",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = PatientDto.class))),
-            @ApiResponse(responseCode = "404", description = "Pacjent nie znaleziony",
+            @ApiResponse(responseCode = "404", description = "Patient not found",
                     content = @Content)
     })
-    @Tag(name = "Otrzymaj konkretnego pacjenta")
     @GetMapping("/{id}")
-    public ResponseEntity<PatientDto> findById(@PathVariable Long id) {
+    public ResponseEntity<PatientDto> findById(
+            @Parameter(description = "ID of the patient to retrieve", example = "1")
+            @PathVariable Long id) {
         return ResponseEntity.ok(patientService.findById(id));
     }
 
-    @Operation(summary = "Zaaktualizowanie danych pacjenta")
+    @Operation(summary = "Update patient data", description = "Updates details of an existing patient identified by ID.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Pacjent zaaktualizowany",
+            @ApiResponse(responseCode = "200", description = "Patient updated successfully",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = PatientDto.class))),
-            @ApiResponse(responseCode = "400", description = "Niepoprawne żądanie",
+            @ApiResponse(responseCode = "400", description = "Invalid input data provided",
                     content = @Content),
-            @ApiResponse(responseCode = "404", description = "Pacjent nie znaleziony",
+            @ApiResponse(responseCode = "404", description = "Patient not found",
                     content = @Content)
     })
-    @Tag(name = "Zaaktualizuj pacjenta")
     @PutMapping("/{id}")
     public ResponseEntity<PatientDto> update(
+            @Parameter(description = "ID of the patient to update", example = "1")
             @PathVariable Long id,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Zaaktualizuj dane pacjenta",
+                    description = "Updated patient details",
                     required = true,
                     content = @Content(
+                            mediaType = "application/json",
                             schema = @Schema(implementation = UpdatePatientCommand.class),
                             examples = @ExampleObject(value = """
                                     {
-                                      "idCardNumber": 42424241414
+                                      "idCardNo": "42424241414",
                                       "birthday": "1995-01-01"
                                     }
                                     """)))

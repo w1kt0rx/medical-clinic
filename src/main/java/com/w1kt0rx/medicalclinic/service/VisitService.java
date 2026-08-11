@@ -34,18 +34,18 @@ public class VisitService {
             throw new IllegalDateException("Visit can only start at the top of the hour", HttpStatus.CONFLICT);
         }
         Doctor doctor = doctorRepository.findById(command.doctorId())
-                .orElseThrow(() -> new DoctorNotFoundException(String.format("Couldn't find a doctor with id: %s", command.doctorId()), HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new DoctorNotFoundException(command.doctorId()));
         if (visitRepository.existsByDoctorIdAndStartDateBeforeAndFinishDateAfter(doctor.getId(), command.finishDate(), command.startDate())) {
                 throw new VisitOverlapException("Doctor has visit booked on this term", HttpStatus.CONFLICT);
         }
         Visit visit = mapper.toEntity(command);
-        visit.setDoctor(doctor);
+        doctor.addVisit(visit);
         return mapper.toDto(visitRepository.save(visit));
     }
 
     public VisitDto registerPatient(Long visitId, RegisterPatientForVisitCommand command) {
         Visit visit = visitRepository.findById(visitId)
-                .orElseThrow(() -> new VisitNotFoundException(String.format("Couldn't find a visit with id: %s", visitId), HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new VisitNotFoundException(visitId));
         if (visit.getStartDate().isBefore(LocalDateTime.now())) {
             throw new IllegalDateException("Cannot book visit that was in the past", HttpStatus.CONFLICT);
         }
@@ -53,8 +53,8 @@ public class VisitService {
             throw new VisitAlreadyReservedException("This visit is already booked", HttpStatus.CONFLICT);
         }
         Patient patient = patientRepository.findById(command.patientId())
-                .orElseThrow(() -> new PatientNotFoundException(String.format("Couldn't find a patient with id: %s", command.patientId()),HttpStatus.NOT_FOUND));
-        visit.setPatient(patient);
+                .orElseThrow(() -> new PatientNotFoundException(command.patientId()));
+        patient.addVisit(visit);
         return mapper.toDto((visitRepository.save(visit)));
     }
 
@@ -73,12 +73,12 @@ public class VisitService {
 
     public VisitDto findById(Long id) {
         return mapper.toDto(visitRepository.findById(id)
-                .orElseThrow(() -> new VisitNotFoundException(String.format("Couldn't find a visit with id: %s", id), HttpStatus.NOT_FOUND)));
+                .orElseThrow(() -> new VisitNotFoundException(id)));
     }
 
     public void delete(Long id) {
         visitRepository.delete(visitRepository.findById(id)
-                .orElseThrow(() -> new VisitNotFoundException(String.format("Couldn't find a visit with id: %s", id), HttpStatus.NOT_FOUND)));
+                .orElseThrow(() -> new VisitNotFoundException(id)));
     }
 
     public List<VisitDto> findPatientVisits(Long patientId) {

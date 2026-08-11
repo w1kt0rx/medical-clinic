@@ -12,10 +12,11 @@ import lombok.*;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "Patient")
 public class Patient {
-
+    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -26,6 +27,24 @@ public class Patient {
     private User user;
     @OneToMany(mappedBy = "patient")
     private List<Visit> visits = new ArrayList<>();
+
+    public void setUser(User user) {
+        this.user = user;
+        if (user != null && user.getPatient() != this) {
+            user.setPatient(this);
+        }
+    }
+
+    public void addVisit(Visit visit) {
+        this.visits.add(visit);
+        visit.setPatient(this);
+    }
+
+    public void removeVisit(Visit visit) {
+        this.visits.remove(visit);
+        visit.setPatient(null);
+    }
+
     public Patient update(UpdatePatientCommand command) {
         this.idCardNo = command.idCardNo();
         this.birthday = command.birthday();

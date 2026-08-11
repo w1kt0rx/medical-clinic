@@ -11,6 +11,7 @@ import com.w1kt0rx.medicalclinic.model.User;
 import com.w1kt0rx.medicalclinic.repository.ClinicRepository;
 import com.w1kt0rx.medicalclinic.repository.DoctorRepository;
 import com.w1kt0rx.medicalclinic.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,20 +28,27 @@ public class DoctorService {
     private final ClinicRepository clinicRepository;
     private final DoctorMapper mapper;
 
+    @Transactional
     public DoctorDto create(CreateDoctorCommand command) {
         User user = userRepository.findById(command.userId())
-                .orElseThrow(() -> new UserNotFoundException("Couldn't find user", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new UserNotFoundException(command.userId()));
         Set<Clinic> clinics = new HashSet<>(
                 clinicRepository.findAllById(command.clinicIds())
         );
         Doctor doctor = mapper.toEntity(command);
         doctor.setUser(user);
-        doctor.setClinics(clinics);
+        clinics.forEach(doctor::addClinic);
         return mapper.toDto(doctorRepository.save(doctor));
     }
 
+    @Transactional
     public void delete(Long id) {
-        doctorRepository.delete(getDoctorById(id));
+        Doctor doctor = getDoctorById(id);
+        if (!doctor.getVisits().isEmpty()) {
+            throw new DoctorHasScheduledVisitsException(id);
+        }
+        new HashSet<>(doctor.getClinics()).forEach(doctor::removeClinic);
+        doctorRepository.delete(doctor);
     }
 
     public List<DoctorDto> findAll() {
@@ -53,6 +61,7 @@ public class DoctorService {
         return mapper.toDto(getDoctorById(id));
     }
 
+    @Transactional
     public DoctorDto update(Long id, UpdateDoctorCommand command) {
         Doctor doctor = getDoctorById(id);
         Set<Clinic> clinics = new HashSet<>(
@@ -61,11 +70,12 @@ public class DoctorService {
         return mapper.toDto(doctorRepository.save(doctor.update(command, clinics)));
     }
 
+    @Transactional
     public DoctorDto addClinic(Long doctorId, Long clinicId) {
         Doctor doctor = getDoctorById(doctorId);
         Clinic clinic = clinicRepository.findById(clinicId)
-                .orElseThrow(() -> new ClinicNotFoundException("Couldn't find clinic", HttpStatus.NOT_FOUND));
-        if (!doctor.getClinics().add(clinic)) {
+                .orElseThrow(() -> new ClinicNotFoundException(clinicId));
+        if (!doctor.addClinic(clinic)) {
             throw new ClinicAlreadyAssignedException(
                     "Doctor is already assigned to this clinic",
                     HttpStatus.CONFLICT
@@ -74,11 +84,12 @@ public class DoctorService {
         return mapper.toDto(doctorRepository.save(doctor));
     }
 
+    @Transactional
     public DoctorDto removeClinic(Long doctorId, Long clinicId) {
         Doctor doctor = getDoctorById(doctorId);
         Clinic clinic = clinicRepository.findById(clinicId)
-                .orElseThrow(() -> new ClinicNotFoundException("Couldn't find clinic", HttpStatus.NOT_FOUND));
-        if (!doctor.getClinics().remove(clinic)) {
+                .orElseThrow(() -> new ClinicNotFoundException(clinicId));
+        if (!doctor.removeClinic(clinic)) {
             throw new ClinicNotAssignedException(
                     "Doctor was not assigned to this clinic",
                     HttpStatus.NOT_FOUND
@@ -89,6 +100,6 @@ public class DoctorService {
 
     private Doctor getDoctorById(Long id) {
         return doctorRepository.findById(id)
-                .orElseThrow(() -> new DoctorNotFoundException(String.format("Couldn't find doctor with id: %d", id), HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new DoctorNotFoundException(id));
     }
 }

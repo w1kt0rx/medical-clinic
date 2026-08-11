@@ -9,10 +9,12 @@ import com.w1kt0rx.medicalclinic.mapper.ClinicMapper;
 import com.w1kt0rx.medicalclinic.model.Address;
 import com.w1kt0rx.medicalclinic.model.Clinic;
 import com.w1kt0rx.medicalclinic.repository.ClinicRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -22,16 +24,20 @@ public class ClinicService {
     private final ClinicRepository clinicRepository;
     private final ClinicMapper mapper;
 
+    @Transactional
     public ClinicDto create(CreateClinicCommand command) {
-        if(clinicRepository.existsByName(command.name())) {
+        if (clinicRepository.existsByName(command.name())) {
             throw new ClinicAlreadyExistsException("Clinic already exists", HttpStatus.CONFLICT);
         }
         Clinic clinic = mapper.toEntity(command);
         return mapper.toDto(clinicRepository.save(clinic));
     }
 
+    @Transactional
     public void delete(Long id) {
-        clinicRepository.delete(getClinicById(id));
+        Clinic clinic = getClinicById(id);
+        new HashSet<>(clinic.getDoctors()).forEach(clinic::removeDoctor);
+        clinicRepository.delete(clinic);
     }
 
     public List<ClinicDto> findAll() {
@@ -44,6 +50,7 @@ public class ClinicService {
         return mapper.toDto(getClinicById(id));
     }
 
+    @Transactional
     public ClinicDto update(Long id, UpdateClinicCommand command) {
         Clinic clinic = getClinicById(id).update(command);
         return mapper.toDto(clinicRepository.save(clinic));
@@ -51,6 +58,6 @@ public class ClinicService {
 
     private Clinic getClinicById(Long id) {
         return clinicRepository.findById(id)
-                .orElseThrow(() -> new ClinicNotFoundException(String.format("Couldn't find clinic with id: %d", id), HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new ClinicNotFoundException(id));
     }
 }
