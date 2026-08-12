@@ -31,12 +31,7 @@ public class PatientServiceTest {
     PatientRepository patientRepository;
     UserRepository userRepository;
     PatientMapper patientMapper;
-    UserMapper userMapper;
 
-    User user;
-    UserDto userDto;
-    Patient patient1;
-    Patient patient2;
 
     @BeforeEach
     void setup() {
@@ -45,38 +40,43 @@ public class PatientServiceTest {
         this.patientMapper = Mappers.getMapper(PatientMapper.class);
         ReflectionTestUtils.setField(patientMapper, "userMapper", Mappers.getMapper(UserMapper.class));
         this.patientService = new PatientService(patientRepository, userRepository, patientMapper);
-        this.user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
-        this.userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
-        this.patient1 = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
-        this.patient2 = new Patient(2L, "456456", LocalDate.of(1995, 5, 10), user, List.of());
     }
 
     @Test
     void create_dataCorrect_mappedPatientReturned() {
+        //given
+        User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
+        Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
+        UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
         CreatePatientCommand command = new CreatePatientCommand(1L, "123123", LocalDate.of(2026, 12, 22));
         when(userRepository.findById(command.userId())).thenReturn(Optional.of(user));
-        when(patientRepository.save(any(Patient.class))).thenReturn(patient1);
-
+        when(patientRepository.save(any(Patient.class))).thenReturn(patient);
+        //when
         PatientDto patientDto = patientService.create(command);
-
+        //then
         Assertions.assertAll(
                 () -> Assertions.assertEquals(1L, patientDto.id()),
                 () -> Assertions.assertEquals("123123", patientDto.idCardNo()),
                 () -> Assertions.assertEquals(LocalDate.of(2026, 12, 22), patientDto.birthday()),
-                () -> Assertions.assertEquals(userDto,patientDto.user()),
-                () -> Assertions.assertEquals(userDto.email(),patientDto.user().email()),
-                () -> Assertions.assertEquals(userDto.id(),patientDto.user().id()),
-                () -> Assertions.assertEquals(userDto.firstName(),patientDto.user().firstName()),
-                () -> Assertions.assertEquals(userDto.lastName(),patientDto.user().lastName()),
-                () -> Assertions.assertEquals(userDto.phoneNumber(),patientDto.user().phoneNumber()));
+                () -> Assertions.assertEquals(userDto, patientDto.user()),
+                () -> Assertions.assertEquals(userDto.email(), patientDto.user().email()),
+                () -> Assertions.assertEquals(userDto.id(), patientDto.user().id()),
+                () -> Assertions.assertEquals(userDto.firstName(), patientDto.user().firstName()),
+                () -> Assertions.assertEquals(userDto.lastName(), patientDto.user().lastName()),
+                () -> Assertions.assertEquals(userDto.phoneNumber(), patientDto.user().phoneNumber()));
     }
 
     @Test
     void getAllPatients_dataCorrect_patientsReturned() {
+        //given
+        User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
+        Patient patient1 = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
+        Patient patient2 = new Patient(2L, "456456", LocalDate.of(1995, 5, 10), user, List.of());
+        UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
         when(patientRepository.findAll()).thenReturn(List.of(patient1, patient2));
-
+        //when
         List<PatientDto> patients = patientService.findAll();
-
+        //then
         Assertions.assertAll(
                 () -> Assertions.assertEquals(2, patients.size()),
                 () -> Assertions.assertEquals(1L, patients.getFirst().id()),
@@ -92,33 +92,41 @@ public class PatientServiceTest {
 
     @Test
     void findById_patientExists_patientReturned() {
-        when(patientRepository.findById(patient1.getId())).thenReturn(Optional.of(patient1));
-
-        PatientDto patientDto = patientService.findById(patient1.getId());
-
+        //given
+        User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
+        Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
+        UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
+        when(patientRepository.findById(patient.getId())).thenReturn(Optional.of(patient));
+        //when
+        PatientDto patientDto = patientService.findById(patient.getId());
+        //then
         Assertions.assertAll(
-                () -> Assertions.assertEquals(patient1.getId(), patientDto.id()),
-                () -> Assertions.assertEquals(patient1.getIdCardNo(), patientDto.idCardNo()),
-                () -> Assertions.assertEquals(patient1.getBirthday(), patientDto.birthday()),
+                () -> Assertions.assertEquals(patient.getId(), patientDto.id()),
+                () -> Assertions.assertEquals(patient.getIdCardNo(), patientDto.idCardNo()),
+                () -> Assertions.assertEquals(patient.getBirthday(), patientDto.birthday()),
                 () -> Assertions.assertEquals(userDto, patientDto.user())
         );
     }
 
     @Test
     void update_patientExists_updatedPatientReturned() {
+        //given
+        User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
+        Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
+        UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
         UpdatePatientCommand command = new UpdatePatientCommand(
                 "999999",
                 LocalDate.of(2000, 1, 1)
         );
-        when(patientRepository.findById(patient1.getId()))
-                .thenReturn(Optional.of(patient1));
+        when(patientRepository.findById(patient.getId()))
+                .thenReturn(Optional.of(patient));
         when(patientRepository.save(any(Patient.class)))
-                .thenReturn(patient1);
-
-        PatientDto patientDto = patientService.update(patient1.getId(), command);
-
+                .thenReturn(patient);
+        //when
+        PatientDto patientDto = patientService.update(patient.getId(), command);
+        //then
         Assertions.assertAll(
-                () -> Assertions.assertEquals(patient1.getId(), patientDto.id()),
+                () -> Assertions.assertEquals(patient.getId(), patientDto.id()),
                 () -> Assertions.assertEquals("999999", patientDto.idCardNo()),
                 () -> Assertions.assertEquals(LocalDate.of(2000, 1, 1), patientDto.birthday()),
                 () -> Assertions.assertEquals(userDto, patientDto.user())
@@ -127,11 +135,14 @@ public class PatientServiceTest {
 
     @Test
     void delete_patientExistsWithoutVisits_patientDeleted() {
-        when(patientRepository.findById(patient1.getId()))
-                .thenReturn(Optional.of(patient1));
-
-        patientService.delete(patient1.getId());
-
-        Mockito.verify(patientRepository).delete(patient1);
+        //given
+        User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
+        Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
+        when(patientRepository.findById(patient.getId()))
+                .thenReturn(Optional.of(patient));
+        //when
+        patientService.delete(patient.getId());
+        //then
+        Mockito.verify(patientRepository).delete(patient);
     }
 }

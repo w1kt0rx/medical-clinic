@@ -12,10 +12,9 @@ import lombok.*;
 @Entity
 @Table(name = "Users")
 public class User {
-
+    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include
     private Long id;
     @Column(unique = true, nullable = false)
     private String email;
