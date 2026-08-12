@@ -21,7 +21,7 @@ public class Clinic {
     private Long id;
     @Column(unique = true, nullable = false)
     private String name;
-    @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE}, orphanRemoval = true)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "address_id", nullable = false, unique = true)
     private Address address;
     @ManyToMany(mappedBy = "clinics")
@@ -42,12 +42,11 @@ public class Clinic {
         return added;
     }
 
-    public boolean removeDoctor(Doctor doctor) {
+    public void removeDoctor(Doctor doctor) {
         boolean removed = this.doctors.remove(doctor);
         if (removed) {
             doctor.getClinics().remove(this);
         }
-        return removed;
     }
 
     public Clinic update(UpdateClinicCommand command) {

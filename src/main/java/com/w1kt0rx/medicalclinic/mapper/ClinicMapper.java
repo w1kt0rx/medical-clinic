@@ -12,7 +12,6 @@ public interface ClinicMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "doctors", ignore = true)
     @Mapping(target = "address.id", ignore = true)
-    @Mapping(target = "address.id", ignore = true)
     @Mapping(target = "address.city", source = "city")
     @Mapping(target = "address.postalCode", source = "postalCode")
     @Mapping(target = "address.street", source = "street")

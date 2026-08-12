@@ -3,6 +3,7 @@ package com.w1kt0rx.medicalclinic.mapper;
 import com.w1kt0rx.medicalclinic.command.CreatePatientCommand;
 import com.w1kt0rx.medicalclinic.dto.PatientDto;
 import com.w1kt0rx.medicalclinic.model.Patient;
+import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
