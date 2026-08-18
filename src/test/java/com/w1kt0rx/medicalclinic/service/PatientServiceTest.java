@@ -4,11 +4,15 @@ import com.w1kt0rx.medicalclinic.command.CreatePatientCommand;
 import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
 import com.w1kt0rx.medicalclinic.dto.PatientDto;
 import com.w1kt0rx.medicalclinic.dto.UserDto;
+import com.w1kt0rx.medicalclinic.exception.PatientHasScheduledVisitsException;
+import com.w1kt0rx.medicalclinic.exception.PatientNotFoundException;
+import com.w1kt0rx.medicalclinic.exception.UserNotFoundException;
 import com.w1kt0rx.medicalclinic.mapper.PatientMapper;
 import com.w1kt0rx.medicalclinic.mapper.PatientMapperImpl;
 import com.w1kt0rx.medicalclinic.mapper.UserMapper;
 import com.w1kt0rx.medicalclinic.model.Patient;
 import com.w1kt0rx.medicalclinic.model.User;
+import com.w1kt0rx.medicalclinic.model.Visit;
 import com.w1kt0rx.medicalclinic.repository.PatientRepository;
 import com.w1kt0rx.medicalclinic.repository.UserRepository;
 import org.junit.jupiter.api.Assertions;
@@ -19,6 +23,7 @@ import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,7 +48,7 @@ public class PatientServiceTest {
     }
 
     @Test
-    void create_dataCorrect_mappedPatientReturned() {
+    void create_dataCorrect_patientReturned() {
         //given
         User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
         Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
@@ -144,5 +149,50 @@ public class PatientServiceTest {
         patientService.delete(patient.getId());
         //then
         Mockito.verify(patientRepository).delete(patient);
+    }
+
+    @Test
+    void create_userNotExists_throwsException() {
+        //given
+        CreatePatientCommand command = new CreatePatientCommand(1L, "123123", LocalDate.of(2026, 12, 22));
+        when(userRepository.findById(command.userId())).thenReturn(Optional.empty());
+        //when then
+        Assertions.assertThrows(UserNotFoundException.class, () -> patientService.create(command));
+    }
+
+    @Test
+    void findById_patientNotExists_throwsException() {
+        //given
+        when(patientRepository.findById(1L)).thenReturn(Optional.empty());
+        //when then
+        Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.findById(1L));
+    }
+
+    @Test
+    void update_patientNotExists_throwsException() {
+        //given
+        UpdatePatientCommand command = new UpdatePatientCommand("999999", LocalDate.of(2000, 1, 1));
+        when(patientRepository.findById(1L)).thenReturn(Optional.empty());
+        //when then
+        Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.update(1L, command));
+    }
+
+    @Test
+    void delete_patientHasScheduledVisits_throwsException() {
+        //given
+        User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
+        Visit visit = new Visit(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), null, null);
+        Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of(visit));
+        when(patientRepository.findById(patient.getId())).thenReturn(Optional.of(patient));
+        //when then
+        Assertions.assertThrows(PatientHasScheduledVisitsException.class, () -> patientService.delete(patient.getId()));
+    }
+
+    @Test
+    void delete_patientNotExists_throwsException() {
+        //given
+        when(patientRepository.findById(1L)).thenReturn(Optional.empty());
+        //when then
+        Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.delete(1L));
     }
 }
