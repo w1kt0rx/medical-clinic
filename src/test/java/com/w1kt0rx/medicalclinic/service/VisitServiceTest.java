@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.time.LocalDate;
@@ -58,17 +59,22 @@ public class VisitServiceTest {
         CreateVisitCommand command = new CreateVisitCommand(1L, start, finish);
         Doctor doctor = new Doctor(1L, "Kardiolog", null, new HashSet<>(), new ArrayList<>());
         Visit savedVisit = new Visit(1L, start, finish, doctor, null);
+        ArgumentCaptor<Visit> visitCaptor = ArgumentCaptor.forClass(Visit.class);
         when(doctorRepository.findById(command.doctorId())).thenReturn(Optional.of(doctor));
         when(visitRepository.existsByDoctorIdAndStartDateBeforeAndFinishDateAfter(doctor.getId(), finish, start)).thenReturn(Boolean.FALSE);
         when(visitRepository.save(any(Visit.class))).thenReturn(savedVisit);
         //when
         VisitDto visitDto = visitService.create(command);
         //then
+        Mockito.verify(visitRepository).save(visitCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(1L, visitDto.id()),
                 () -> Assertions.assertEquals(1L, visitDto.doctor().id()),
                 () -> Assertions.assertEquals("Kardiolog", visitDto.doctor().specialization()),
-                () -> Assertions.assertNull(visitDto.patient())
+                () -> Assertions.assertNull(visitDto.patient()),
+                () -> Assertions.assertEquals(start, visitCaptor.getValue().getStartDate()),
+                () -> Assertions.assertEquals(finish, visitCaptor.getValue().getFinishDate()),
+                () -> Assertions.assertEquals(doctor, visitCaptor.getValue().getDoctor())
         );
     }
 
@@ -76,16 +82,18 @@ public class VisitServiceTest {
     void create_startDateInPast_throwsException() {
         //given
         CreateVisitCommand command = new CreateVisitCommand(1L, LocalDateTime.of(2020, 1, 1, 10, 0), LocalDateTime.of(2020, 1, 1, 11, 0));
-        //when then
+        //when + then
         Assertions.assertThrows(IllegalDateException.class, () -> visitService.create(command));
+        Mockito.verify(visitRepository, Mockito.never()).save(any());
     }
 
     @Test
     void create_startDateNotFullHour_throwsException() {
         //given
         CreateVisitCommand command = new CreateVisitCommand(1L, LocalDateTime.of(2026, 12, 22, 10, 30), LocalDateTime.of(2026, 12, 22, 11, 30));
-        //when then
+        //when + then
         Assertions.assertThrows(IllegalDateException.class, () -> visitService.create(command));
+        Mockito.verify(visitRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -93,8 +101,9 @@ public class VisitServiceTest {
         //given
         CreateVisitCommand command = new CreateVisitCommand(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0));
         when(doctorRepository.findById(command.doctorId())).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(DoctorNotFoundException.class, () -> visitService.create(command));
+        Mockito.verify(visitRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -106,8 +115,9 @@ public class VisitServiceTest {
         Doctor doctor = new Doctor(1L, "Kardiolog", null, new HashSet<>(), new ArrayList<>());
         when(doctorRepository.findById(command.doctorId())).thenReturn(Optional.of(doctor));
         when(visitRepository.existsByDoctorIdAndStartDateBeforeAndFinishDateAfter(doctor.getId(), finish, start)).thenReturn(Boolean.TRUE);
-        //when then
+        //when + then
         Assertions.assertThrows(VisitOverlapException.class, () -> visitService.create(command));
+        Mockito.verify(visitRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -120,17 +130,20 @@ public class VisitServiceTest {
         User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
         Patient patient = new Patient(1L, "123123", LocalDate.of(1990, 1, 1), user, new ArrayList<>());
         RegisterPatientForVisitCommand command = new RegisterPatientForVisitCommand(1L);
+        ArgumentCaptor<Visit> visitCaptor = ArgumentCaptor.forClass(Visit.class);
         when(visitRepository.findById(visit.getId())).thenReturn(Optional.of(visit));
         when(patientRepository.findById(command.patientId())).thenReturn(Optional.of(patient));
         when(visitRepository.save(any(Visit.class))).thenReturn(visit);
         //when
         VisitDto visitDto = visitService.registerPatient(visit.getId(), command);
         //then
+        Mockito.verify(visitRepository).save(visitCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(1L, visitDto.id()),
                 () -> Assertions.assertEquals(1L, visitDto.patient().id()),
                 () -> Assertions.assertEquals("123123", visitDto.patient().idCardNo()),
-                () -> Assertions.assertTrue(patient.getVisits().contains(visit))
+                () -> Assertions.assertTrue(patient.getVisits().contains(visit)),
+                () -> Assertions.assertEquals(patient, visitCaptor.getValue().getPatient())
         );
     }
 
@@ -141,6 +154,7 @@ public class VisitServiceTest {
         when(visitRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
         Assertions.assertThrows(VisitNotFoundException.class, () -> visitService.registerPatient(1L, command));
+        Mockito.verify(visitRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -150,8 +164,9 @@ public class VisitServiceTest {
         Visit visit = new Visit(1L, LocalDateTime.of(2020, 1, 1, 10, 0), LocalDateTime.of(2020, 1, 1, 11, 0), doctor, null);
         RegisterPatientForVisitCommand command = new RegisterPatientForVisitCommand(1L);
         when(visitRepository.findById(visit.getId())).thenReturn(Optional.of(visit));
-        //when then
+        //when + then
         Assertions.assertThrows(IllegalDateException.class, () -> visitService.registerPatient(visit.getId(), command));
+        Mockito.verify(visitRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -163,8 +178,9 @@ public class VisitServiceTest {
         Visit visit = new Visit(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctor, patient);
         RegisterPatientForVisitCommand command = new RegisterPatientForVisitCommand(1L);
         when(visitRepository.findById(visit.getId())).thenReturn(Optional.of(visit));
-        //when then
+        //when + then
         Assertions.assertThrows(VisitAlreadyReservedException.class, () -> visitService.registerPatient(visit.getId(), command));
+        Mockito.verify(visitRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -175,8 +191,9 @@ public class VisitServiceTest {
         RegisterPatientForVisitCommand command = new RegisterPatientForVisitCommand(1L);
         when(visitRepository.findById(visit.getId())).thenReturn(Optional.of(visit));
         when(patientRepository.findById(command.patientId())).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(PatientNotFoundException.class, () -> visitService.registerPatient(visit.getId(), command));
+        Mockito.verify(visitRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -189,6 +206,7 @@ public class VisitServiceTest {
         //when
         List<VisitDto> visits = visitService.findAll();
         //then
+        Mockito.verify(visitRepository).findAll();
         Assertions.assertAll(
                 () -> Assertions.assertEquals(2, visits.size()),
                 () -> Assertions.assertEquals(1L, visits.getFirst().id()),
@@ -205,6 +223,7 @@ public class VisitServiceTest {
         //when
         List<VisitDto> visits = visitService.findFreeVisits();
         //then
+        Mockito.verify(visitRepository).findByPatientIsNull();
         Assertions.assertAll(
                 () -> Assertions.assertEquals(1, visits.size()),
                 () -> Assertions.assertEquals(1L, visits.getFirst().id()),
@@ -217,13 +236,16 @@ public class VisitServiceTest {
         //given
         Doctor doctor = new Doctor(1L, "Kardiolog", null, new HashSet<>(), new ArrayList<>());
         Visit visit = new Visit(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctor, null);
+        ArgumentCaptor<Long> idCaptor = ArgumentCaptor.forClass(Long.class);
         when(visitRepository.findById(visit.getId())).thenReturn(Optional.of(visit));
         //when
         VisitDto visitDto = visitService.findById(visit.getId());
         //then
+        Mockito.verify(visitRepository).findById(idCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(visit.getId(), visitDto.id()),
-                () -> Assertions.assertEquals(visit.getDoctor().getId(), visitDto.doctor().id())
+                () -> Assertions.assertEquals(visit.getDoctor().getId(), visitDto.doctor().id()),
+                () -> Assertions.assertEquals(1L, idCaptor.getValue())
         );
     }
 
@@ -231,7 +253,7 @@ public class VisitServiceTest {
     void findById_visitNotExists_throwsException() {
         //given
         when(visitRepository.findById(1L)).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(VisitNotFoundException.class, () -> visitService.findById(1L));
     }
 
@@ -240,19 +262,22 @@ public class VisitServiceTest {
         //given
         Doctor doctor = new Doctor(1L, "Kardiolog", null, new HashSet<>(), new ArrayList<>());
         Visit visit = new Visit(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctor, null);
+        ArgumentCaptor<Visit> visitCaptor = ArgumentCaptor.forClass(Visit.class);
         when(visitRepository.findById(visit.getId())).thenReturn(Optional.of(visit));
         //when
         visitService.delete(visit.getId());
         //then
-        Mockito.verify(visitRepository).delete(visit);
+        Mockito.verify(visitRepository).delete(visitCaptor.capture());
+        Assertions.assertEquals(visit, visitCaptor.getValue());
     }
 
     @Test
     void delete_visitNotExists_throwsException() {
         //given
         when(visitRepository.findById(1L)).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(VisitNotFoundException.class, () -> visitService.delete(1L));
+        Mockito.verify(visitRepository, Mockito.never()).delete(any());
     }
 
     @Test
@@ -262,14 +287,17 @@ public class VisitServiceTest {
         User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
         Patient patient = new Patient(1L, "123123", LocalDate.of(1990, 1, 1), user, new ArrayList<>());
         Visit visit = new Visit(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctor, patient);
+        ArgumentCaptor<Long> idCaptor = ArgumentCaptor.forClass(Long.class);
         when(visitRepository.findByPatientId(patient.getId())).thenReturn(List.of(visit));
         //when
         List<VisitDto> visits = visitService.findPatientVisits(patient.getId());
         //then
+        Mockito.verify(visitRepository).findByPatientId(idCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(1, visits.size()),
                 () -> Assertions.assertEquals(1L, visits.getFirst().id()),
-                () -> Assertions.assertEquals(1L, visits.getFirst().patient().id())
+                () -> Assertions.assertEquals(1L, visits.getFirst().patient().id()),
+                () -> Assertions.assertEquals(1L, idCaptor.getValue())
         );
     }
 }

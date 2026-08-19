@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -54,11 +55,13 @@ public class PatientServiceTest {
         Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
         UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
         CreatePatientCommand command = new CreatePatientCommand(1L, "123123", LocalDate.of(2026, 12, 22));
+        ArgumentCaptor<Patient> patientCaptor = ArgumentCaptor.forClass(Patient.class);
         when(userRepository.findById(command.userId())).thenReturn(Optional.of(user));
         when(patientRepository.save(any(Patient.class))).thenReturn(patient);
         //when
         PatientDto patientDto = patientService.create(command);
         //then
+        Mockito.verify(patientRepository).save(patientCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(1L, patientDto.id()),
                 () -> Assertions.assertEquals("123123", patientDto.idCardNo()),
@@ -68,7 +71,20 @@ public class PatientServiceTest {
                 () -> Assertions.assertEquals(userDto.id(), patientDto.user().id()),
                 () -> Assertions.assertEquals(userDto.firstName(), patientDto.user().firstName()),
                 () -> Assertions.assertEquals(userDto.lastName(), patientDto.user().lastName()),
-                () -> Assertions.assertEquals(userDto.phoneNumber(), patientDto.user().phoneNumber()));
+                () -> Assertions.assertEquals(userDto.phoneNumber(), patientDto.user().phoneNumber()),
+                () -> Assertions.assertEquals("123123", patientCaptor.getValue().getIdCardNo()),
+                () -> Assertions.assertEquals(user, patientCaptor.getValue().getUser())
+        );
+    }
+
+    @Test
+    void create_userNotExists_throwsException() {
+        //given
+        CreatePatientCommand command = new CreatePatientCommand(1L, "123123", LocalDate.of(2026, 12, 22));
+        when(userRepository.findById(command.userId())).thenReturn(Optional.empty());
+        //when + then
+        Assertions.assertThrows(UserNotFoundException.class, () -> patientService.create(command));
+        Mockito.verify(patientRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -82,6 +98,7 @@ public class PatientServiceTest {
         //when
         List<PatientDto> patients = patientService.findAll();
         //then
+        Mockito.verify(patientRepository).findAll();
         Assertions.assertAll(
                 () -> Assertions.assertEquals(2, patients.size()),
                 () -> Assertions.assertEquals(1L, patients.getFirst().id()),
@@ -101,16 +118,27 @@ public class PatientServiceTest {
         User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
         Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
         UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
+        ArgumentCaptor<Long> idCaptor = ArgumentCaptor.forClass(Long.class);
         when(patientRepository.findById(patient.getId())).thenReturn(Optional.of(patient));
         //when
         PatientDto patientDto = patientService.findById(patient.getId());
         //then
+        Mockito.verify(patientRepository).findById(idCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(patient.getId(), patientDto.id()),
                 () -> Assertions.assertEquals(patient.getIdCardNo(), patientDto.idCardNo()),
                 () -> Assertions.assertEquals(patient.getBirthday(), patientDto.birthday()),
-                () -> Assertions.assertEquals(userDto, patientDto.user())
+                () -> Assertions.assertEquals(userDto, patientDto.user()),
+                () -> Assertions.assertEquals(1L, idCaptor.getValue())
         );
+    }
+
+    @Test
+    void findById_patientNotExists_throwsException() {
+        //given
+        when(patientRepository.findById(1L)).thenReturn(Optional.empty());
+        //when + then
+        Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.findById(1L));
     }
 
     @Test
@@ -123,6 +151,7 @@ public class PatientServiceTest {
                 "999999",
                 LocalDate.of(2000, 1, 1)
         );
+        ArgumentCaptor<Patient> patientCaptor = ArgumentCaptor.forClass(Patient.class);
         when(patientRepository.findById(patient.getId()))
                 .thenReturn(Optional.of(patient));
         when(patientRepository.save(any(Patient.class)))
@@ -130,42 +159,15 @@ public class PatientServiceTest {
         //when
         PatientDto patientDto = patientService.update(patient.getId(), command);
         //then
+        Mockito.verify(patientRepository).save(patientCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(patient.getId(), patientDto.id()),
                 () -> Assertions.assertEquals("999999", patientDto.idCardNo()),
                 () -> Assertions.assertEquals(LocalDate.of(2000, 1, 1), patientDto.birthday()),
-                () -> Assertions.assertEquals(userDto, patientDto.user())
+                () -> Assertions.assertEquals(userDto, patientDto.user()),
+                () -> Assertions.assertEquals("999999", patientCaptor.getValue().getIdCardNo()),
+                () -> Assertions.assertEquals(LocalDate.of(2000, 1, 1), patientCaptor.getValue().getBirthday())
         );
-    }
-
-    @Test
-    void delete_patientExistsWithoutVisits_patientDeleted() {
-        //given
-        User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
-        Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
-        when(patientRepository.findById(patient.getId()))
-                .thenReturn(Optional.of(patient));
-        //when
-        patientService.delete(patient.getId());
-        //then
-        Mockito.verify(patientRepository).delete(patient);
-    }
-
-    @Test
-    void create_userNotExists_throwsException() {
-        //given
-        CreatePatientCommand command = new CreatePatientCommand(1L, "123123", LocalDate.of(2026, 12, 22));
-        when(userRepository.findById(command.userId())).thenReturn(Optional.empty());
-        //when then
-        Assertions.assertThrows(UserNotFoundException.class, () -> patientService.create(command));
-    }
-
-    @Test
-    void findById_patientNotExists_throwsException() {
-        //given
-        when(patientRepository.findById(1L)).thenReturn(Optional.empty());
-        //when then
-        Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.findById(1L));
     }
 
     @Test
@@ -173,8 +175,24 @@ public class PatientServiceTest {
         //given
         UpdatePatientCommand command = new UpdatePatientCommand("999999", LocalDate.of(2000, 1, 1));
         when(patientRepository.findById(1L)).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.update(1L, command));
+        Mockito.verify(patientRepository, Mockito.never()).save(any());
+    }
+
+    @Test
+    void delete_patientExistsWithoutVisits_patientDeleted() {
+        //given
+        User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
+        Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
+        ArgumentCaptor<Patient> patientCaptor = ArgumentCaptor.forClass(Patient.class);
+        when(patientRepository.findById(patient.getId()))
+                .thenReturn(Optional.of(patient));
+        //when
+        patientService.delete(patient.getId());
+        //then
+        Mockito.verify(patientRepository).delete(patientCaptor.capture());
+        Assertions.assertEquals(patient, patientCaptor.getValue());
     }
 
     @Test
@@ -184,15 +202,17 @@ public class PatientServiceTest {
         Visit visit = new Visit(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), null, null);
         Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of(visit));
         when(patientRepository.findById(patient.getId())).thenReturn(Optional.of(patient));
-        //when then
+        //when + then
         Assertions.assertThrows(PatientHasScheduledVisitsException.class, () -> patientService.delete(patient.getId()));
+        Mockito.verify(patientRepository, Mockito.never()).delete(any());
     }
 
     @Test
     void delete_patientNotExists_throwsException() {
         //given
         when(patientRepository.findById(1L)).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.delete(1L));
+        Mockito.verify(patientRepository, Mockito.never()).delete(any());
     }
 }

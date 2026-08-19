@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.time.LocalDateTime;
@@ -65,18 +66,23 @@ public class DoctorServiceTest {
         ClinicDto clinicDto = new ClinicDto(1L, "Zdrowie", addressDto);
         CreateDoctorCommand command = new CreateDoctorCommand(1L, "Kardiolog", Set.of(1L));
         Doctor savedDoctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(Set.of(clinic)), List.of());
+        ArgumentCaptor<Doctor> doctorCaptor = ArgumentCaptor.forClass(Doctor.class);
         when(userRepository.findById(command.userId())).thenReturn(Optional.of(user));
         when(clinicRepository.findAllById(command.clinicIds())).thenReturn(List.of(clinic));
         when(doctorRepository.save(any(Doctor.class))).thenReturn(savedDoctor);
         //when
         DoctorDto doctorDto = doctorService.create(command);
         //then
+        Mockito.verify(doctorRepository).save(doctorCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(1L, doctorDto.id()),
                 () -> Assertions.assertEquals("Kardiolog", doctorDto.specialization()),
                 () -> Assertions.assertEquals(userDto, doctorDto.user()),
                 () -> Assertions.assertEquals(1, doctorDto.clinics().size()),
-                () -> Assertions.assertTrue(doctorDto.clinics().contains(clinicDto))
+                () -> Assertions.assertTrue(doctorDto.clinics().contains(clinicDto)),
+                () -> Assertions.assertEquals("Kardiolog", doctorCaptor.getValue().getSpecialization()),
+                () -> Assertions.assertEquals(user, doctorCaptor.getValue().getUser()),
+                () -> Assertions.assertTrue(doctorCaptor.getValue().getClinics().contains(clinic))
         );
     }
 
@@ -85,8 +91,9 @@ public class DoctorServiceTest {
         //given
         CreateDoctorCommand command = new CreateDoctorCommand(1L, "Kardiolog", Set.of());
         when(userRepository.findById(command.userId())).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(UserNotFoundException.class, () -> doctorService.create(command));
+        Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -94,11 +101,13 @@ public class DoctorServiceTest {
         //given
         User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
         Doctor doctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(), new ArrayList<>());
+        ArgumentCaptor<Doctor> doctorCaptor = ArgumentCaptor.forClass(Doctor.class);
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         //when
         doctorService.delete(doctor.getId());
         //then
-        Mockito.verify(doctorRepository).delete(doctor);
+        Mockito.verify(doctorRepository).delete(doctorCaptor.capture());
+        Assertions.assertEquals(doctor, doctorCaptor.getValue());
     }
 
     @Test
@@ -108,16 +117,18 @@ public class DoctorServiceTest {
         Visit visit = new Visit(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), null, null);
         Doctor doctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(), new ArrayList<>(List.of(visit)));
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
-        //when then
+        //when + then
         Assertions.assertThrows(DoctorHasScheduledVisitsException.class, () -> doctorService.delete(doctor.getId()));
+        Mockito.verify(doctorRepository, Mockito.never()).delete(any());
     }
 
     @Test
     void delete_doctorNotExists_throwsException() {
         //given
         when(doctorRepository.findById(1L)).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(DoctorNotFoundException.class, () -> doctorService.delete(1L));
+        Mockito.verify(doctorRepository, Mockito.never()).delete(any());
     }
 
     @Test
@@ -131,6 +142,7 @@ public class DoctorServiceTest {
         //when
         List<DoctorDto> doctors = doctorService.findAll();
         //then
+        Mockito.verify(doctorRepository).findAll();
         Assertions.assertAll(
                 () -> Assertions.assertEquals(2, doctors.size()),
                 () -> Assertions.assertEquals(1L, doctors.getFirst().id()),
@@ -145,13 +157,16 @@ public class DoctorServiceTest {
         //given
         User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
         Doctor doctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(), List.of());
+        ArgumentCaptor<Long> idCaptor = ArgumentCaptor.forClass(Long.class);
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         //when
         DoctorDto doctorDto = doctorService.findById(doctor.getId());
         //then
+        Mockito.verify(doctorRepository).findById(idCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(doctor.getId(), doctorDto.id()),
-                () -> Assertions.assertEquals(doctor.getSpecialization(), doctorDto.specialization())
+                () -> Assertions.assertEquals(doctor.getSpecialization(), doctorDto.specialization()),
+                () -> Assertions.assertEquals(1L, idCaptor.getValue())
         );
     }
 
@@ -159,7 +174,7 @@ public class DoctorServiceTest {
     void findById_doctorNotExists_throwsException() {
         //given
         when(doctorRepository.findById(1L)).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(DoctorNotFoundException.class, () -> doctorService.findById(1L));
     }
 
@@ -171,17 +186,31 @@ public class DoctorServiceTest {
         Clinic newClinic = new Clinic(2L, "Nowa Klinika", address, new HashSet<>());
         Doctor doctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(), new ArrayList<>());
         UpdateDoctorCommand command = new UpdateDoctorCommand("Chirurg", Set.of(2L));
+        ArgumentCaptor<Doctor> doctorCaptor = ArgumentCaptor.forClass(Doctor.class);
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findAllById(command.clinicIds())).thenReturn(List.of(newClinic));
         when(doctorRepository.save(any(Doctor.class))).thenReturn(doctor);
         //when
         DoctorDto doctorDto = doctorService.update(doctor.getId(), command);
         //then
+        Mockito.verify(doctorRepository).save(doctorCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(1L, doctorDto.id()),
                 () -> Assertions.assertEquals("Chirurg", doctorDto.specialization()),
-                () -> Assertions.assertEquals(1, doctorDto.clinics().size())
+                () -> Assertions.assertEquals(1, doctorDto.clinics().size()),
+                () -> Assertions.assertEquals("Chirurg", doctorCaptor.getValue().getSpecialization()),
+                () -> Assertions.assertTrue(doctorCaptor.getValue().getClinics().contains(newClinic))
         );
+    }
+
+    @Test
+    void update_doctorNotExists_throwsException() {
+        //given
+        UpdateDoctorCommand command = new UpdateDoctorCommand("Chirurg", Set.of());
+        when(doctorRepository.findById(1L)).thenReturn(Optional.empty());
+        //when + then
+        Assertions.assertThrows(DoctorNotFoundException.class, () -> doctorService.update(1L, command));
+        Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -191,16 +220,19 @@ public class DoctorServiceTest {
         Address address = new Address(1L, "Warszawa", "00-001", "Zdrowia", "1", null);
         Clinic clinic = new Clinic(1L, "Zdrowie", address, new HashSet<>());
         Doctor doctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(), new ArrayList<>());
+        ArgumentCaptor<Doctor> doctorCaptor = ArgumentCaptor.forClass(Doctor.class);
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findById(clinic.getId())).thenReturn(Optional.of(clinic));
         when(doctorRepository.save(any(Doctor.class))).thenReturn(doctor);
         //when
         DoctorDto doctorDto = doctorService.addClinic(doctor.getId(), clinic.getId());
         //then
+        Mockito.verify(doctorRepository).save(doctorCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals(1, doctorDto.clinics().size()),
                 () -> Assertions.assertTrue(doctor.getClinics().contains(clinic)),
-                () -> Assertions.assertTrue(clinic.getDoctors().contains(doctor))
+                () -> Assertions.assertTrue(clinic.getDoctors().contains(doctor)),
+                () -> Assertions.assertTrue(doctorCaptor.getValue().getClinics().contains(clinic))
         );
     }
 
@@ -214,8 +246,9 @@ public class DoctorServiceTest {
         clinic.getDoctors().add(doctor);
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findById(clinic.getId())).thenReturn(Optional.of(clinic));
-        //when then
+        //when + then
         Assertions.assertThrows(ClinicAlreadyAssignedException.class, () -> doctorService.addClinic(doctor.getId(), clinic.getId()));
+        Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -225,8 +258,9 @@ public class DoctorServiceTest {
         Doctor doctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(), new ArrayList<>());
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findById(1L)).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(ClinicNotFoundException.class, () -> doctorService.addClinic(doctor.getId(), 1L));
+        Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -237,16 +271,19 @@ public class DoctorServiceTest {
         Clinic clinic = new Clinic(1L, "Zdrowie", address, new HashSet<>());
         Doctor doctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(Set.of(clinic)), new ArrayList<>());
         clinic.getDoctors().add(doctor);
+        ArgumentCaptor<Doctor> doctorCaptor = ArgumentCaptor.forClass(Doctor.class);
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findById(clinic.getId())).thenReturn(Optional.of(clinic));
         when(doctorRepository.save(any(Doctor.class))).thenReturn(doctor);
         //when
         DoctorDto doctorDto = doctorService.removeClinic(doctor.getId(), clinic.getId());
         //then
+        Mockito.verify(doctorRepository).save(doctorCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertTrue(doctorDto.clinics().isEmpty()),
                 () -> Assertions.assertFalse(doctor.getClinics().contains(clinic)),
-                () -> Assertions.assertFalse(clinic.getDoctors().contains(doctor))
+                () -> Assertions.assertFalse(clinic.getDoctors().contains(doctor)),
+                () -> Assertions.assertTrue(doctorCaptor.getValue().getClinics().isEmpty())
         );
     }
 
@@ -259,8 +296,9 @@ public class DoctorServiceTest {
         Doctor doctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(), new ArrayList<>());
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findById(clinic.getId())).thenReturn(Optional.of(clinic));
-        //when then
+        //when + then
         Assertions.assertThrows(ClinicNotAssignedException.class, () -> doctorService.removeClinic(doctor.getId(), clinic.getId()));
+        Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 
     @Test
@@ -270,7 +308,8 @@ public class DoctorServiceTest {
         Doctor doctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(), new ArrayList<>());
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findById(1L)).thenReturn(Optional.empty());
-        //when then
+        //when + then
         Assertions.assertThrows(ClinicNotFoundException.class, () -> doctorService.removeClinic(doctor.getId(), 1L));
+        Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 }
