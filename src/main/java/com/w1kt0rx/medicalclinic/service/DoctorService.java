@@ -13,6 +13,8 @@ import com.w1kt0rx.medicalclinic.repository.DoctorRepository;
 import com.w1kt0rx.medicalclinic.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -51,10 +53,9 @@ public class DoctorService {
         doctorRepository.delete(doctor);
     }
 
-    public List<DoctorDto> findAll() {
-        return doctorRepository.findAll().stream()
-                .map(mapper::toDto)
-                .toList();
+    public Page<DoctorDto> findAll(Pageable pageable) {
+        return doctorRepository.findAll(pageable)
+                .map(mapper::toDto);
     }
 
     public DoctorDto findById(Long id) {

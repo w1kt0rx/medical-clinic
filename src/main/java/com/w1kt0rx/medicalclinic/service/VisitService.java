@@ -12,6 +12,8 @@ import com.w1kt0rx.medicalclinic.repository.DoctorRepository;
 import com.w1kt0rx.medicalclinic.repository.PatientRepository;
 import com.w1kt0rx.medicalclinic.repository.VisitRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -58,17 +60,14 @@ public class VisitService {
         return mapper.toDto((visitRepository.save(visit)));
     }
 
-    public List<VisitDto> findAll() {
-        return visitRepository.findAll().stream()
-                .map(mapper::toDto)
-                .toList();
+    public Page<VisitDto> findAll(Pageable pageable) {
+        return visitRepository.findAll(pageable)
+                .map(mapper::toDto);
     }
 
-    public List<VisitDto> findFreeVisits() {
-        return visitRepository.findByPatientIsNull()
-                .stream()
-                .map(mapper::toDto)
-                .toList();
+    public Page<VisitDto> findFreeVisits(Pageable pageable) {
+        return visitRepository.findByPatientIsNull(pageable)
+                .map(mapper::toDto);
     }
 
     public VisitDto findById(Long id) {
@@ -81,10 +80,8 @@ public class VisitService {
                 .orElseThrow(() -> new VisitNotFoundException(id)));
     }
 
-    public List<VisitDto> findPatientVisits(Long patientId) {
-        return visitRepository.findByPatientId(patientId)
-                .stream()
-                .map(mapper::toDto)
-                .toList();
+    public Page<VisitDto> findPatientVisits(Long patientId, Pageable pageable) {
+        return visitRepository.findByPatientId(patientId, pageable)
+                .map(mapper::toDto);
     }
 }

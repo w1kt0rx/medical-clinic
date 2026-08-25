@@ -7,5 +7,5 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring",
         uses = ClinicMapper.class)
 public interface AddressMapper {
-    public AddressDto toDto(Address address);
+    AddressDto toDto(Address address);
 }

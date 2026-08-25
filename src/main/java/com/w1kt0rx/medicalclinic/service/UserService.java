@@ -10,6 +10,8 @@ import com.w1kt0rx.medicalclinic.model.User;
 import com.w1kt0rx.medicalclinic.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -36,10 +38,9 @@ public class UserService {
         repository.delete(getUserByEmail(email));
     }
 
-    public List<UserDto> findAll() {
-        return repository.findAll().stream()
-                .map(mapper::toDto)
-                .toList();
+    public Page<UserDto> findAll(Pageable pageable) {
+        return repository.findAll(pageable)
+                .map(mapper::toDto);
     }
 
     public UserDto findByEmail(String email) {

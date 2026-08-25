@@ -4,15 +4,15 @@ import com.w1kt0rx.medicalclinic.command.UpdateClinicCommand;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.Objects;
+
 @Setter
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "Address")
 public class Address {
-    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -29,5 +29,20 @@ public class Address {
         this.street = command.street();
         this.houseNumber = command.houseNumber();
         return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Address))
+            return false;
+        Address other = (Address) o;
+        return id != null &&
+                id.equals(other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

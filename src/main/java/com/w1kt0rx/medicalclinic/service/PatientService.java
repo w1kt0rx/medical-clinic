@@ -11,11 +11,12 @@ import com.w1kt0rx.medicalclinic.model.Patient;
 import com.w1kt0rx.medicalclinic.model.User;
 import com.w1kt0rx.medicalclinic.repository.PatientRepository;
 
-import java.util.List;
 
 import com.w1kt0rx.medicalclinic.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -44,10 +45,9 @@ public class PatientService {
         patientRepository.delete(patient);
     }
 
-    public List<PatientDto> findAll() {
-        return patientRepository.findAll().stream()
-                .map(mapper::toDto)
-                .toList();
+    public Page<PatientDto> findAll(Pageable pageable) {
+        return patientRepository.findAll(pageable)
+                .map(mapper::toDto);
     }
 
     public PatientDto findById(Long id) {

@@ -8,7 +8,6 @@ import com.w1kt0rx.medicalclinic.exception.PatientHasScheduledVisitsException;
 import com.w1kt0rx.medicalclinic.exception.PatientNotFoundException;
 import com.w1kt0rx.medicalclinic.exception.UserNotFoundException;
 import com.w1kt0rx.medicalclinic.mapper.PatientMapper;
-import com.w1kt0rx.medicalclinic.mapper.PatientMapperImpl;
 import com.w1kt0rx.medicalclinic.mapper.UserMapper;
 import com.w1kt0rx.medicalclinic.model.Patient;
 import com.w1kt0rx.medicalclinic.model.User;
@@ -21,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.data.domain.*;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -83,32 +83,37 @@ public class PatientServiceTest {
         CreatePatientCommand command = new CreatePatientCommand(1L, "123123", LocalDate.of(2026, 12, 22));
         when(userRepository.findById(command.userId())).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(UserNotFoundException.class, () -> patientService.create(command));
+        UserNotFoundException ex = Assertions.assertThrows(UserNotFoundException.class, () -> patientService.create(command));
+        Assertions.assertAll(
+                () -> Assertions.assertEquals("Couldn't find user with id: 1", ex.getMessage()),
+                () -> Assertions.assertEquals(org.springframework.http.HttpStatus.NOT_FOUND, ex.getHttpStatus())
+        );
         Mockito.verify(patientRepository, Mockito.never()).save(any());
     }
 
     @Test
-    void getAllPatients_dataCorrect_patientsReturned() {
+    void findAll_dataCorrect_pageOfPatientsReturned() {
         //given
         User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
         Patient patient1 = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
         Patient patient2 = new Patient(2L, "456456", LocalDate.of(1995, 5, 10), user, List.of());
         UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
-        when(patientRepository.findAll()).thenReturn(List.of(patient1, patient2));
+        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
+        Page<Patient> patientPage = new PageImpl<>(List.of(patient1, patient2), pageable, 2);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        when(patientRepository.findAll(pageable)).thenReturn(patientPage);
         //when
-        List<PatientDto> patients = patientService.findAll();
+        Page<PatientDto> result = patientService.findAll(pageable);
         //then
-        Mockito.verify(patientRepository).findAll();
+        Mockito.verify(patientRepository).findAll(pageableCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(2, patients.size()),
-                () -> Assertions.assertEquals(1L, patients.getFirst().id()),
-                () -> Assertions.assertEquals("123123", patients.getFirst().idCardNo()),
-                () -> Assertions.assertEquals(LocalDate.of(2026, 12, 22), patients.getFirst().birthday()),
-                () -> Assertions.assertEquals(userDto, patients.getFirst().user()),
-                () -> Assertions.assertEquals(2L, patients.get(1).id()),
-                () -> Assertions.assertEquals("456456", patients.get(1).idCardNo()),
-                () -> Assertions.assertEquals(LocalDate.of(1995, 5, 10), patients.get(1).birthday()),
-                () -> Assertions.assertEquals(userDto, patients.get(1).user())
+                () -> Assertions.assertEquals(2, result.getTotalElements()),
+                () -> Assertions.assertEquals(1, result.getTotalPages()),
+                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
+                () -> Assertions.assertEquals("123123", result.getContent().getFirst().idCardNo()),
+                () -> Assertions.assertEquals(userDto, result.getContent().getFirst().user()),
+                () -> Assertions.assertEquals(2L, result.getContent().get(1).id()),
+                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
         );
     }
 
@@ -138,7 +143,8 @@ public class PatientServiceTest {
         //given
         when(patientRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.findById(1L));
+        PatientNotFoundException ex = Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.findById(1L));
+        Assertions.assertEquals("Couldn't find patient with id: 1", ex.getMessage());
     }
 
     @Test
@@ -147,9 +153,7 @@ public class PatientServiceTest {
         User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
         Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
         UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
-        UpdatePatientCommand command = new UpdatePatientCommand(
-                "999999",
-                LocalDate.of(2000, 1, 1)
+        UpdatePatientCommand command = new UpdatePatientCommand("999999", LocalDate.of(2000, 1, 1)
         );
         ArgumentCaptor<Patient> patientCaptor = ArgumentCaptor.forClass(Patient.class);
         when(patientRepository.findById(patient.getId()))
@@ -176,7 +180,8 @@ public class PatientServiceTest {
         UpdatePatientCommand command = new UpdatePatientCommand("999999", LocalDate.of(2000, 1, 1));
         when(patientRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.update(1L, command));
+        PatientNotFoundException ex = Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.update(1L, command));
+        Assertions.assertEquals("Couldn't find patient with id: 1", ex.getMessage());
         Mockito.verify(patientRepository, Mockito.never()).save(any());
     }
 
@@ -203,7 +208,8 @@ public class PatientServiceTest {
         Patient patient = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of(visit));
         when(patientRepository.findById(patient.getId())).thenReturn(Optional.of(patient));
         //when + then
-        Assertions.assertThrows(PatientHasScheduledVisitsException.class, () -> patientService.delete(patient.getId()));
+        PatientHasScheduledVisitsException ex = Assertions.assertThrows(PatientHasScheduledVisitsException.class, () -> patientService.delete(patient.getId()));
+        Assertions.assertNull(ex.getMessage());
         Mockito.verify(patientRepository, Mockito.never()).delete(any());
     }
 
@@ -212,7 +218,8 @@ public class PatientServiceTest {
         //given
         when(patientRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.delete(1L));
+        PatientNotFoundException ex = Assertions.assertThrows(PatientNotFoundException.class, () -> patientService.delete(1L));
+        Assertions.assertEquals("Couldn't find patient with id: 1", ex.getMessage());
         Mockito.verify(patientRepository, Mockito.never()).delete(any());
     }
 }

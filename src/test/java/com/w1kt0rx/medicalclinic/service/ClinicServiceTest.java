@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.data.domain.*;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.HashSet;
@@ -71,7 +72,11 @@ public class ClinicServiceTest {
         CreateClinicCommand command = new CreateClinicCommand("Zdrowie", "Warszawa", "00-001", "Zdrowia", "1");
         when(clinicRepository.existsByName(command.name())).thenReturn(Boolean.TRUE);
         //when + then
-        Assertions.assertThrows(ClinicAlreadyExistsException.class, () -> clinicService.create(command));
+        ClinicAlreadyExistsException ex = Assertions.assertThrows(ClinicAlreadyExistsException.class, () -> clinicService.create(command));
+        Assertions.assertAll(
+                () -> Assertions.assertEquals("Clinic already exists", ex.getMessage()),
+                () -> Assertions.assertEquals(org.springframework.http.HttpStatus.CONFLICT, ex.getHttpStatus())
+        );
         Mockito.verify(clinicRepository, Mockito.never()).save(any());
     }
 
@@ -94,30 +99,37 @@ public class ClinicServiceTest {
         //given
         when(clinicRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(ClinicNotFoundException.class, () -> clinicService.delete(1L));
+        ClinicNotFoundException ex = Assertions.assertThrows(ClinicNotFoundException.class, () -> clinicService.delete(1L));
+        Assertions.assertAll(
+                () -> Assertions.assertEquals("Couldn't find clinic with id: 1", ex.getMessage()),
+                () -> Assertions.assertEquals(org.springframework.http.HttpStatus.NOT_FOUND, ex.getHttpStatus())
+        );
         Mockito.verify(clinicRepository, Mockito.never()).delete(any());
     }
 
     @Test
-    void findAll_dataCorrect_clinicsReturned() {
+    void findAll_dataCorrect_pageOfClinicsReturned() {
         //given
         Address address1 = new Address(1L, "Warszawa", "00-001", "Zdrowia", "1", null);
         Address address2 = new Address(2L, "Krakow", "30-001", "Zielona", "5", null);
         Clinic clinic1 = new Clinic(1L, "Zdrowie", address1, new HashSet<>());
         Clinic clinic2 = new Clinic(2L, "Nowa Klinika", address2, new HashSet<>());
-        when(clinicRepository.findAll()).thenReturn(List.of(clinic1, clinic2));
+        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
+        Page<Clinic> clinicPage = new PageImpl<>(List.of(clinic1, clinic2), pageable, 2);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        when(clinicRepository.findAll(pageable)).thenReturn(clinicPage);
         //when
-        List<ClinicDto> clinics = clinicService.findAll();
+        Page<ClinicDto> result = clinicService.findAll(pageable);
         //then
-        Mockito.verify(clinicRepository).findAll();
+        Mockito.verify(clinicRepository).findAll(pageableCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(2, clinics.size()),
-                () -> Assertions.assertEquals(1L, clinics.getFirst().id()),
-                () -> Assertions.assertEquals("Zdrowie", clinics.getFirst().name()),
-                () -> Assertions.assertEquals("Warszawa", clinics.getFirst().address().city()),
-                () -> Assertions.assertEquals(2L, clinics.get(1).id()),
-                () -> Assertions.assertEquals("Nowa Klinika", clinics.get(1).name()),
-                () -> Assertions.assertEquals("Krakow", clinics.get(1).address().city())
+                () -> Assertions.assertEquals(2, result.getTotalElements()),
+                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
+                () -> Assertions.assertEquals("Zdrowie", result.getContent().getFirst().name()),
+                () -> Assertions.assertEquals("Warszawa", result.getContent().getFirst().address().city()),
+                () -> Assertions.assertEquals(2L, result.getContent().get(1).id()),
+                () -> Assertions.assertEquals("Nowa Klinika", result.getContent().get(1).name()),
+                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
         );
     }
 
@@ -145,7 +157,8 @@ public class ClinicServiceTest {
         //given
         when(clinicRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(ClinicNotFoundException.class, () -> clinicService.findById(1L));
+        ClinicNotFoundException ex = Assertions.assertThrows(ClinicNotFoundException.class, () -> clinicService.findById(1L));
+        Assertions.assertEquals("Couldn't find clinic with id: 1", ex.getMessage());
     }
 
     @Test
@@ -178,7 +191,8 @@ public class ClinicServiceTest {
         UpdateClinicCommand command = new UpdateClinicCommand("Nowa Nazwa", "Krakow", "30-001", "Zielona", "5");
         when(clinicRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(ClinicNotFoundException.class, () -> clinicService.update(1L, command));
+        ClinicNotFoundException ex = Assertions.assertThrows(ClinicNotFoundException.class, () -> clinicService.update(1L, command));
+        Assertions.assertEquals("Couldn't find clinic with id: 1", ex.getMessage());
         Mockito.verify(clinicRepository, Mockito.never()).save(any());
     }
 }

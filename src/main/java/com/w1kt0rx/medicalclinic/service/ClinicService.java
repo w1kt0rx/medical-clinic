@@ -6,11 +6,12 @@ import com.w1kt0rx.medicalclinic.dto.ClinicDto;
 import com.w1kt0rx.medicalclinic.exception.ClinicAlreadyExistsException;
 import com.w1kt0rx.medicalclinic.exception.ClinicNotFoundException;
 import com.w1kt0rx.medicalclinic.mapper.ClinicMapper;
-import com.w1kt0rx.medicalclinic.model.Address;
 import com.w1kt0rx.medicalclinic.model.Clinic;
 import com.w1kt0rx.medicalclinic.repository.ClinicRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -40,10 +41,9 @@ public class ClinicService {
         clinicRepository.delete(clinic);
     }
 
-    public List<ClinicDto> findAll() {
-        return clinicRepository.findAll().stream()
-                .map(mapper::toDto)
-                .toList();
+    public Page<ClinicDto> findAll(Pageable pageable) {
+        return clinicRepository.findAll(pageable)
+                .map(mapper::toDto);
     }
 
     public ClinicDto findById(Long id) {

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.data.domain.*;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,7 +47,16 @@ public class UserServiceTest {
         UserDto userDto = userService.create(command);
         //then
         Mockito.verify(userRepository).save(userCaptor.capture());
-        Assertions.assertAll(() -> Assertions.assertEquals(1L, userDto.id()), () -> Assertions.assertEquals("example@email.com", userDto.email()), () -> Assertions.assertEquals("Jacek", userDto.firstName()), () -> Assertions.assertEquals("Placek", userDto.lastName()), () -> Assertions.assertEquals("123123123", userDto.phoneNumber()), () -> Assertions.assertEquals("example@email.com", userCaptor.getValue().getEmail()), () -> Assertions.assertEquals("Jacek", userCaptor.getValue().getFirstName()), () -> Assertions.assertEquals("Placek", userCaptor.getValue().getLastName()), () -> Assertions.assertEquals("123123123", userCaptor.getValue().getPhoneNumber()));
+        Assertions.assertAll(
+                () -> Assertions.assertEquals(1L, userDto.id()),
+                () -> Assertions.assertEquals("example@email.com", userDto.email()),
+                () -> Assertions.assertEquals("Jacek", userDto.firstName()),
+                () -> Assertions.assertEquals("Placek", userDto.lastName()),
+                () -> Assertions.assertEquals("123123123", userDto.phoneNumber()),
+                () -> Assertions.assertEquals("example@email.com", userCaptor.getValue().getEmail()),
+                () -> Assertions.assertEquals("Jacek", userCaptor.getValue().getFirstName()),
+                () -> Assertions.assertEquals("Placek", userCaptor.getValue().getLastName()),
+                () -> Assertions.assertEquals("123123123", userCaptor.getValue().getPhoneNumber()));
     }
 
     @Test
@@ -55,21 +65,35 @@ public class UserServiceTest {
         CreateUserCommand command = new CreateUserCommand("example@email.com", "password", "Jacek", "Placek", "123123123");
         when(userRepository.existsByEmail(command.email())).thenReturn(Boolean.TRUE);
         //when + then
-        Assertions.assertThrows(EmailAlreadyInUseException.class, () -> userService.create(command));
+        EmailAlreadyInUseException ex = Assertions.assertThrows(EmailAlreadyInUseException.class, () -> userService.create(command));
+        Assertions.assertAll(
+                () -> Assertions.assertEquals("Email - example@email.com - jest już w uzyciu", ex.getMessage()),
+                () -> Assertions.assertEquals(org.springframework.http.HttpStatus.CONFLICT, ex.getHttpStatus())
+        );
         Mockito.verify(userRepository, Mockito.never()).save(any());
     }
 
     @Test
-    void findAll_dataCorrect_listOfUsersReturned() {
+    void findAll_dataCorrect_pageOfUsersReturned() {
         //given
         User user1 = new User(1L, "example1@gmail.com", "haslo1", "Jacek", "Placek", "123123123", null, null);
         User user2 = new User(2L, "example2@gmail.com", "haslo2", "Marcin", "Radzki", "321321321", null, null);
-        when(userRepository.findAll()).thenReturn(List.of(user1, user2));
+        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
+        Page<User> userPage = new PageImpl<>(List.of(user1, user2), pageable, 2);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        when(userRepository.findAll(pageable)).thenReturn(userPage);
         //when
-        List<UserDto> users = userService.findAll();
+        Page<UserDto> result = userService.findAll(pageable);
         //then
-        Mockito.verify(userRepository).findAll();
-        Assertions.assertAll(() -> Assertions.assertEquals(2, users.size()), () -> Assertions.assertEquals(1L, users.getFirst().id()), () -> Assertions.assertEquals("example1@gmail.com", users.getFirst().email()), () -> Assertions.assertEquals("Jacek", users.getFirst().firstName()), () -> Assertions.assertEquals("Placek", users.getFirst().lastName()), () -> Assertions.assertEquals("123123123", users.getFirst().phoneNumber()), () -> Assertions.assertEquals(2L, users.get(1).id()), () -> Assertions.assertEquals("example2@gmail.com", users.get(1).email()), () -> Assertions.assertEquals("Marcin", users.get(1).firstName()), () -> Assertions.assertEquals("Radzki", users.get(1).lastName()), () -> Assertions.assertEquals("321321321", users.get(1).phoneNumber()));
+        Mockito.verify(userRepository).findAll(pageableCaptor.capture());
+        Assertions.assertAll(
+                () -> Assertions.assertEquals(2, result.getTotalElements()),
+                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
+                () -> Assertions.assertEquals("example1@gmail.com", result.getContent().getFirst().email()),
+                () -> Assertions.assertEquals(2L, result.getContent().get(1).id()),
+                () -> Assertions.assertEquals("example2@gmail.com", result.getContent().get(1).email()),
+                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
+        );
     }
 
     @Test
@@ -86,11 +110,12 @@ public class UserServiceTest {
     }
 
     @Test
-    void findByEmail_userNotExists_throwsException() {
+    void findByEmail_userNotExists_throwsExceptionWithNullIdInMessage() {
         //given
         when(userRepository.findByEmail("missing@email.com")).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(UserNotFoundException.class, () -> userService.findByEmail("missing@email.com"));
+        UserNotFoundException ex = Assertions.assertThrows(UserNotFoundException.class, () -> userService.findByEmail("missing@email.com"));
+        Assertions.assertEquals("Couldn't find user with id: null", ex.getMessage());
     }
 
     @Test
@@ -111,7 +136,8 @@ public class UserServiceTest {
         //given
         when(userRepository.findByEmail("missing@email.com")).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(UserNotFoundException.class, () -> userService.delete("missing@email.com"));
+        UserNotFoundException ex = Assertions.assertThrows(UserNotFoundException.class, () -> userService.delete("missing@email.com"));
+        Assertions.assertEquals("Couldn't find user with id: null", ex.getMessage());
         Mockito.verify(userRepository, Mockito.never()).delete(any());
     }
 
@@ -136,7 +162,8 @@ public class UserServiceTest {
         UpdateUserCommand command = new UpdateUserCommand("Marcin", "newPassword", "Nowak", "999999999");
         when(userRepository.findByEmail("missing@email.com")).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(UserNotFoundException.class, () -> userService.update("missing@email.com", command));
+        UserNotFoundException ex = Assertions.assertThrows(UserNotFoundException.class, () -> userService.update("missing@email.com", command));
+        Assertions.assertEquals("Couldn't find user with id: null", ex.getMessage());
         Mockito.verify(userRepository, Mockito.never()).save(any());
     }
 
@@ -158,7 +185,8 @@ public class UserServiceTest {
         //given
         when(userRepository.findByEmail("missing@email.com")).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(UserNotFoundException.class, () -> userService.updatePassword("missing@email.com", "newPassword"));
+        UserNotFoundException ex = Assertions.assertThrows(UserNotFoundException.class, () -> userService.updatePassword("missing@email.com", "newPassword"));
+        Assertions.assertEquals("Couldn't find user with id: null", ex.getMessage());
         Mockito.verify(userRepository, Mockito.never()).save(any());
     }
 }

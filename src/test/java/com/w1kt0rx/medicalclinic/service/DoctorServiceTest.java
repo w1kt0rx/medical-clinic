@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.data.domain.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -92,7 +93,11 @@ public class DoctorServiceTest {
         CreateDoctorCommand command = new CreateDoctorCommand(1L, "Kardiolog", Set.of());
         when(userRepository.findById(command.userId())).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(UserNotFoundException.class, () -> doctorService.create(command));
+        UserNotFoundException ex = Assertions.assertThrows(UserNotFoundException.class, () -> doctorService.create(command));
+        Assertions.assertAll(
+                () -> Assertions.assertEquals("Couldn't find user with id: 1", ex.getMessage()),
+                () -> Assertions.assertEquals(org.springframework.http.HttpStatus.NOT_FOUND, ex.getHttpStatus())
+        );
         Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 
@@ -118,7 +123,8 @@ public class DoctorServiceTest {
         Doctor doctor = new Doctor(1L, "Kardiolog", user, new HashSet<>(), new ArrayList<>(List.of(visit)));
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         //when + then
-        Assertions.assertThrows(DoctorHasScheduledVisitsException.class, () -> doctorService.delete(doctor.getId()));
+        DoctorHasScheduledVisitsException ex = Assertions.assertThrows(DoctorHasScheduledVisitsException.class, () -> doctorService.delete(doctor.getId()));
+        Assertions.assertNull(ex.getMessage());
         Mockito.verify(doctorRepository, Mockito.never()).delete(any());
     }
 
@@ -127,28 +133,36 @@ public class DoctorServiceTest {
         //given
         when(doctorRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(DoctorNotFoundException.class, () -> doctorService.delete(1L));
+        DoctorNotFoundException ex = Assertions.assertThrows(DoctorNotFoundException.class, () -> doctorService.delete(1L));
+        Assertions.assertAll(
+                () -> Assertions.assertEquals("Couldn't find doctor with id: 1", ex.getMessage()),
+                () -> Assertions.assertEquals(org.springframework.http.HttpStatus.NOT_FOUND, ex.getHttpStatus())
+        );
         Mockito.verify(doctorRepository, Mockito.never()).delete(any());
     }
 
     @Test
-    void findAll_dataCorrect_doctorsReturned() {
+    void findAll_dataCorrect_pageOfDoctorsReturned() {
         //given
         User user1 = new User(1L, "example1@email.com", "password", "John", "Kowalski", "123123123", null, null);
         User user2 = new User(2L, "example2@email.com", "password", "Anna", "Nowak", "321321321", null, null);
         Doctor doctor1 = new Doctor(1L, "Kardiolog", user1, new HashSet<>(), List.of());
         Doctor doctor2 = new Doctor(2L, "Chirurg", user2, new HashSet<>(), List.of());
-        when(doctorRepository.findAll()).thenReturn(List.of(doctor1, doctor2));
+        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
+        Page<Doctor> doctorPage = new PageImpl<>(List.of(doctor1, doctor2), pageable, 2);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        when(doctorRepository.findAll(pageable)).thenReturn(doctorPage);
         //when
-        List<DoctorDto> doctors = doctorService.findAll();
+        Page<DoctorDto> result = doctorService.findAll(pageable);
         //then
-        Mockito.verify(doctorRepository).findAll();
+        Mockito.verify(doctorRepository).findAll(pageableCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(2, doctors.size()),
-                () -> Assertions.assertEquals(1L, doctors.getFirst().id()),
-                () -> Assertions.assertEquals("Kardiolog", doctors.getFirst().specialization()),
-                () -> Assertions.assertEquals(2L, doctors.get(1).id()),
-                () -> Assertions.assertEquals("Chirurg", doctors.get(1).specialization())
+                () -> Assertions.assertEquals(2, result.getTotalElements()),
+                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
+                () -> Assertions.assertEquals("Kardiolog", result.getContent().getFirst().specialization()),
+                () -> Assertions.assertEquals(2L, result.getContent().get(1).id()),
+                () -> Assertions.assertEquals("Chirurg", result.getContent().get(1).specialization()),
+                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
         );
     }
 
@@ -175,7 +189,8 @@ public class DoctorServiceTest {
         //given
         when(doctorRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(DoctorNotFoundException.class, () -> doctorService.findById(1L));
+        DoctorNotFoundException ex = Assertions.assertThrows(DoctorNotFoundException.class, () -> doctorService.findById(1L));
+        Assertions.assertEquals("Couldn't find doctor with id: 1", ex.getMessage());
     }
 
     @Test
@@ -209,7 +224,8 @@ public class DoctorServiceTest {
         UpdateDoctorCommand command = new UpdateDoctorCommand("Chirurg", Set.of());
         when(doctorRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(DoctorNotFoundException.class, () -> doctorService.update(1L, command));
+        DoctorNotFoundException ex = Assertions.assertThrows(DoctorNotFoundException.class, () -> doctorService.update(1L, command));
+        Assertions.assertEquals("Couldn't find doctor with id: 1", ex.getMessage());
         Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 
@@ -247,7 +263,12 @@ public class DoctorServiceTest {
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findById(clinic.getId())).thenReturn(Optional.of(clinic));
         //when + then
-        Assertions.assertThrows(ClinicAlreadyAssignedException.class, () -> doctorService.addClinic(doctor.getId(), clinic.getId()));
+        ClinicAlreadyAssignedException ex = Assertions.assertThrows(ClinicAlreadyAssignedException.class,
+                () -> doctorService.addClinic(doctor.getId(), clinic.getId()));
+        Assertions.assertAll(
+                () -> Assertions.assertEquals("Doctor is already assigned to this clinic", ex.getMessage()),
+                () -> Assertions.assertEquals(org.springframework.http.HttpStatus.CONFLICT, ex.getHttpStatus())
+        );
         Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 
@@ -259,7 +280,8 @@ public class DoctorServiceTest {
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(ClinicNotFoundException.class, () -> doctorService.addClinic(doctor.getId(), 1L));
+        ClinicNotFoundException ex = Assertions.assertThrows(ClinicNotFoundException.class, () -> doctorService.addClinic(doctor.getId(), 1L));
+        Assertions.assertEquals("Couldn't find clinic with id: 1", ex.getMessage());
         Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 
@@ -297,7 +319,12 @@ public class DoctorServiceTest {
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findById(clinic.getId())).thenReturn(Optional.of(clinic));
         //when + then
-        Assertions.assertThrows(ClinicNotAssignedException.class, () -> doctorService.removeClinic(doctor.getId(), clinic.getId()));
+        ClinicNotAssignedException ex = Assertions.assertThrows(ClinicNotAssignedException.class,
+                () -> doctorService.removeClinic(doctor.getId(), clinic.getId()));
+        Assertions.assertAll(
+                () -> Assertions.assertEquals("Doctor was not assigned to this clinic", ex.getMessage()),
+                () -> Assertions.assertEquals(org.springframework.http.HttpStatus.NOT_FOUND, ex.getHttpStatus())
+        );
         Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 
@@ -309,7 +336,8 @@ public class DoctorServiceTest {
         when(doctorRepository.findById(doctor.getId())).thenReturn(Optional.of(doctor));
         when(clinicRepository.findById(1L)).thenReturn(Optional.empty());
         //when + then
-        Assertions.assertThrows(ClinicNotFoundException.class, () -> doctorService.removeClinic(doctor.getId(), 1L));
+        ClinicNotFoundException ex = Assertions.assertThrows(ClinicNotFoundException.class, () -> doctorService.removeClinic(doctor.getId(), 1L));
+        Assertions.assertEquals("Couldn't find clinic with id: 1", ex.getMessage());
         Mockito.verify(doctorRepository, Mockito.never()).save(any());
     }
 }

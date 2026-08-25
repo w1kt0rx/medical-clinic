@@ -1,12 +1,14 @@
 package com.w1kt0rx.medicalclinic.model;
 
 import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NaturalId;
 
 @Setter
 @Getter
@@ -16,10 +18,11 @@ import lombok.*;
 @Entity
 @Table(name = "Patient")
 public class Patient {
-    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @EqualsAndHashCode.Include
+    @NaturalId
     private String idCardNo;
     private LocalDate birthday;
     @OneToOne

@@ -17,7 +17,7 @@ public interface ClinicMapper {
     @Mapping(target = "address.street", source = "street")
     @Mapping(target = "address.houseNumber", source = "houseNumber")
     @Mapping(target = "address.clinic", ignore = true)
-    public Clinic toEntity(CreateClinicCommand command);
+    Clinic toEntity(CreateClinicCommand command);
 
-    public ClinicDto toDto(Clinic clinic);
+    ClinicDto toDto(Clinic clinic);
 }

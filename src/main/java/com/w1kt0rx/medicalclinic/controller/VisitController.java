@@ -14,11 +14,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/visits")
@@ -26,7 +28,7 @@ import java.util.List;
 @Tag(name = "Visit Management", description = "Endpoints for scheduling, managing, and registering medical visits")
 public class VisitController {
 
-    private final VisitService service;
+    private final VisitService visitService;
 
     @Operation(summary = "Create a new visit", description = "Schedules a new doctor's availability slot/visit in the system.")
     @ApiResponses(value = {
@@ -56,7 +58,7 @@ public class VisitController {
                                     """)))
             @RequestBody CreateVisitCommand command) {
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(command));
+        return ResponseEntity.status(HttpStatus.CREATED).body(visitService.create(command));
     }
 
     @Operation(summary = "Register patient for a visit", description = "Assigns a patient to a specific available visit slot.")
@@ -86,18 +88,15 @@ public class VisitController {
                                     """)))
             @RequestBody RegisterPatientForVisitCommand command) {
 
-        return ResponseEntity.ok(service.registerPatient(id, command));
+        return ResponseEntity.ok(visitService.registerPatient(id, command));
     }
 
-    @Operation(summary = "Get all visits", description = "Retrieves a complete list of all visits in the system.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "List of visits retrieved successfully",
-                    content = @Content(mediaType = "application/json",
-                            array = @ArraySchema(schema = @Schema(implementation = VisitDto.class))))
-    })
+    @Operation(summary = "Get all visits", description = "Retrieves a list of all registered visits.")
+    @ApiResponse(responseCode = "200", description = "Page of visits retrieved successfully")
     @GetMapping
-    public ResponseEntity<List<VisitDto>> findAll() {
-        return ResponseEntity.ok(service.findAll());
+    public ResponseEntity<Page<VisitDto>> findAll(
+            @PageableDefault(sort = "id") Pageable pageable) {
+        return ResponseEntity.ok(visitService.findAll(pageable));
     }
 
     @Operation(summary = "Delete visit by ID", description = "Cancels/removes a visit slot from the system by its ID.")
@@ -110,7 +109,7 @@ public class VisitController {
     public ResponseEntity<Void> delete(
             @Parameter(description = "ID of the visit to delete", example = "1")
             @PathVariable Long id) {
-        service.delete(id);
+        visitService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -126,32 +125,22 @@ public class VisitController {
     public ResponseEntity<VisitDto> findById(
             @Parameter(description = "ID of the visit to retrieve", example = "1")
             @PathVariable Long id) {
-        return ResponseEntity.ok(service.findById(id));
+        return ResponseEntity.ok(visitService.findById(id));
     }
 
     @Operation(summary = "Get all available (free) visits", description = "Retrieves a list of visits that do not currently have an assigned patient.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "List of free visits retrieved successfully",
-                    content = @Content(mediaType = "application/json",
-                            array = @ArraySchema(schema = @Schema(implementation = VisitDto.class))))
-    })
+    @ApiResponse(responseCode = "200", description = "Page of free visits retrieved successfully")
     @GetMapping("/free")
-    public ResponseEntity<List<VisitDto>> findFreeVisits() {
-        return ResponseEntity.ok(service.findFreeVisits());
+    public ResponseEntity<Page<VisitDto>> findFreeVisits(@PageableDefault(size = 20, sort = "id") Pageable pageable) {
+        return ResponseEntity.ok(visitService.findFreeVisits(pageable));
     }
 
     @Operation(summary = "Get visits by patient ID", description = "Retrieves all visits scheduled for a specific patient.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "List of patient visits retrieved successfully",
-                    content = @Content(mediaType = "application/json",
-                            array = @ArraySchema(schema = @Schema(implementation = VisitDto.class)))),
-            @ApiResponse(responseCode = "404", description = "Patient not found",
-                    content = @Content)
-    })
+    @ApiResponse(responseCode = "200", description = "Page of patient visits retrieved successfully")
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<List<VisitDto>> findPatientVisits(
+    public ResponseEntity<Page<VisitDto>> findPatientVisits(
             @Parameter(description = "ID of the patient whose visits should be retrieved", example = "10")
-            @PathVariable Long patientId) {
-        return ResponseEntity.ok(service.findPatientVisits(patientId));
+            @PathVariable Long patientId, @PageableDefault(sort = "id") Pageable pageable) {
+        return ResponseEntity.ok(visitService.findPatientVisits(patientId, pageable));
     }
 }

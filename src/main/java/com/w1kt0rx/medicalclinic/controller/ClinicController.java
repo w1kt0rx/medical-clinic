@@ -10,11 +10,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/clinics")
@@ -47,11 +48,12 @@ public class ClinicController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Get all clinics", description = "Retrieves a list of all registered medical clinics.")
-    @ApiResponse(responseCode = "200", description = "List of clinics retrieved successfully")
+    @Operation(summary = "Get all clinics", description = "Retrieves a list of all registered clinics.")
+    @ApiResponse(responseCode = "200", description = "Page of clinics retrieved successfully")
     @GetMapping
-    public ResponseEntity<List<ClinicDto>> findAll() {
-        return ResponseEntity.ok(clinicService.findAll());
+    public ResponseEntity<Page<ClinicDto>> findAll(
+            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+        return ResponseEntity.ok(clinicService.findAll(pageable));
     }
 
     @Operation(summary = "Get clinic by ID", description = "Retrieves details of a specific clinic by its ID.")
