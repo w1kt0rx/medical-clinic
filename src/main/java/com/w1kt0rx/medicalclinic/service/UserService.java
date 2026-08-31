@@ -2,66 +2,89 @@ package com.w1kt0rx.medicalclinic.service;
 
 import com.w1kt0rx.medicalclinic.command.CreateUserCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateUserCommand;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.dto.UserDto;
 import com.w1kt0rx.medicalclinic.exception.EmailAlreadyInUseException;
 import com.w1kt0rx.medicalclinic.exception.UserNotFoundException;
+import com.w1kt0rx.medicalclinic.mapper.PageRequestMapper;
 import com.w1kt0rx.medicalclinic.mapper.UserMapper;
 import com.w1kt0rx.medicalclinic.model.User;
 import com.w1kt0rx.medicalclinic.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository repository;
+    private final UserRepository userRepository;
     private final UserMapper mapper;
+    private final PageRequestMapper pageRequestMapper;
 
     @Transactional
     public UserDto create(CreateUserCommand command) {
-        if (repository.existsByEmail(command.email())) {
-            throw new EmailAlreadyInUseException(String.format("Email - %s - jest już w uzyciu", command.email()), HttpStatus.CONFLICT);
+        log.debug("Creating user, email={}", command.email());
+        if (userRepository.existsByEmail(command.email())) {
+            log.warn("Cannot create user - email already in use: {}", command.email());
+            throw new EmailAlreadyInUseException(String.format("Email - %s - is already used", command.email()), HttpStatus.CONFLICT);
         }
         User user = mapper.toEntity(command);
-        return mapper.toDto(repository.save(user));
+        User saved = userRepository.save(user);
+        log.info("User created, id={}, email={}", saved.getId(), saved.getEmail());
+        return mapper.toDto(saved);
     }
 
     @Transactional
     public void delete(String email) {
-        repository.delete(getUserByEmail(email));
+        log.debug("Deleting user, email={}", email);
+        User user = getUserByEmail(email);
+        userRepository.delete(user);
+        log.info("User deleted, id={}, email={}", user.getId(), email);
     }
 
-    public Page<UserDto> findAll(Pageable pageable) {
-        return repository.findAll(pageable)
-                .map(mapper::toDto);
+    public PageDto<UserDto> findAll(PageRequestDto pageRequestDto) {
+        Pageable pageable = pageRequestMapper.toPageable(pageRequestDto);
+        log.debug("Fetching users page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
+        return PageDto.from(userRepository.findAll(pageable).map(mapper::toDto));
     }
 
     public UserDto findByEmail(String email) {
-        return mapper.toDto(getUserByEmail(email));
+        log.debug("Fetching user by email={}", email);
+        User user = getUserByEmail(email);
+        return mapper.toDto(user);
     }
 
     @Transactional
     public UserDto update(String email, UpdateUserCommand command) {
+        log.debug("Updating user, email={}", email);
         User user = getUserByEmail(email);
-        return mapper.toDto(repository.save(user.update(command)));
+        user.update(command);
+        User saved = userRepository.save(user);
+        log.info("User updated, id={}, email={}", saved.getId(), email);
+        return mapper.toDto(saved);
     }
 
     @Transactional
-    public void updatePassword(String email, String password) {
+    public void updatePassword(String email, String newPassword) {
+        log.debug("Updating password for email={}", email);
         User user = getUserByEmail(email);
-        repository.save(user.updatePassword(password));
+        user.setPassword(newPassword);
+        userRepository.save(user);
+        log.info("Password updated for userId={}", user.getId());
     }
 
     private User getUserByEmail(String email) {
-        return repository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException(null));
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    log.warn("User not found, email={}", email);
+                    return new UserNotFoundException(null);
+                });
     }
-
 }

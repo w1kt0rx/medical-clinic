@@ -2,11 +2,14 @@ package com.w1kt0rx.medicalclinic.service;
 
 import com.w1kt0rx.medicalclinic.command.CreatePatientCommand;
 import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.dto.PatientDto;
 import com.w1kt0rx.medicalclinic.dto.UserDto;
 import com.w1kt0rx.medicalclinic.exception.PatientHasScheduledVisitsException;
 import com.w1kt0rx.medicalclinic.exception.PatientNotFoundException;
 import com.w1kt0rx.medicalclinic.exception.UserNotFoundException;
+import com.w1kt0rx.medicalclinic.mapper.PageRequestMapper;
 import com.w1kt0rx.medicalclinic.mapper.PatientMapper;
 import com.w1kt0rx.medicalclinic.mapper.UserMapper;
 import com.w1kt0rx.medicalclinic.model.Patient;
@@ -37,6 +40,7 @@ public class PatientServiceTest {
     PatientRepository patientRepository;
     UserRepository userRepository;
     PatientMapper patientMapper;
+    PageRequestMapper pageRequestMapper;
 
 
     @BeforeEach
@@ -45,7 +49,8 @@ public class PatientServiceTest {
         this.userRepository = Mockito.mock(UserRepository.class);
         this.patientMapper = Mappers.getMapper(PatientMapper.class);
         ReflectionTestUtils.setField(patientMapper, "userMapper", Mappers.getMapper(UserMapper.class));
-        this.patientService = new PatientService(patientRepository, userRepository, patientMapper);
+        this.pageRequestMapper = Mappers.getMapper(PageRequestMapper.class);
+        this.patientService = new PatientService(patientRepository, userRepository, patientMapper, pageRequestMapper);
     }
 
     @Test
@@ -98,22 +103,40 @@ public class PatientServiceTest {
         Patient patient1 = new Patient(1L, "123123", LocalDate.of(2026, 12, 22), user, List.of());
         Patient patient2 = new Patient(2L, "456456", LocalDate.of(1995, 5, 10), user, List.of());
         UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
-        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<Patient> patientPage = new PageImpl<>(List.of(patient1, patient2), pageable, 2);
+        PageRequestDto pageRequestDto = new PageRequestDto(0, 20, "id", "asc");
+        Pageable expectedPageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "id"));
+        Page<Patient> patientPage = new PageImpl<>(List.of(patient1, patient2), expectedPageable, 2);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(patientRepository.findAll(pageable)).thenReturn(patientPage);
+        when(patientRepository.findAll(any(Pageable.class))).thenReturn(patientPage);
         //when
-        Page<PatientDto> result = patientService.findAll(pageable);
+        PageDto<PatientDto> result = patientService.findAll(pageRequestDto);
         //then
         Mockito.verify(patientRepository).findAll(pageableCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(2, result.getTotalElements()),
-                () -> Assertions.assertEquals(1, result.getTotalPages()),
-                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
-                () -> Assertions.assertEquals("123123", result.getContent().getFirst().idCardNo()),
-                () -> Assertions.assertEquals(userDto, result.getContent().getFirst().user()),
-                () -> Assertions.assertEquals(2L, result.getContent().get(1).id()),
-                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
+                () -> Assertions.assertEquals(2, result.content().size()),
+                () -> Assertions.assertEquals(1L, result.content().getFirst().id()),
+                () -> Assertions.assertEquals(userDto, result.content().getFirst().user()),
+                () -> Assertions.assertEquals(2, result.totalElements()),
+                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber()),
+                () -> Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize())
+        );
+    }
+
+    @Test
+    void findAll_noParamsProvided_usesMapperDefaults() {
+        //given
+        PageRequestDto pageRequestDto = new PageRequestDto(null, null, null, null);
+        Page<Patient> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        when(patientRepository.findAll(any(Pageable.class))).thenReturn(emptyPage);
+        //when
+        patientService.findAll(pageRequestDto);
+        //then
+        Mockito.verify(patientRepository).findAll(pageableCaptor.capture());
+        Assertions.assertAll(
+                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber()),
+                () -> Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize()),
+                () -> Assertions.assertNotNull(pageableCaptor.getValue().getSort().getOrderFor("id"))
         );
     }
 

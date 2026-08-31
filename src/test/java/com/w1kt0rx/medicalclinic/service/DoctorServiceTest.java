@@ -2,10 +2,7 @@ package com.w1kt0rx.medicalclinic.service;
 
 import com.w1kt0rx.medicalclinic.command.CreateDoctorCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateDoctorCommand;
-import com.w1kt0rx.medicalclinic.dto.AddressDto;
-import com.w1kt0rx.medicalclinic.dto.ClinicDto;
-import com.w1kt0rx.medicalclinic.dto.DoctorDto;
-import com.w1kt0rx.medicalclinic.dto.UserDto;
+import com.w1kt0rx.medicalclinic.dto.*;
 import com.w1kt0rx.medicalclinic.exception.ClinicAlreadyAssignedException;
 import com.w1kt0rx.medicalclinic.exception.ClinicNotAssignedException;
 import com.w1kt0rx.medicalclinic.exception.ClinicNotFoundException;
@@ -13,6 +10,7 @@ import com.w1kt0rx.medicalclinic.exception.DoctorHasScheduledVisitsException;
 import com.w1kt0rx.medicalclinic.exception.DoctorNotFoundException;
 import com.w1kt0rx.medicalclinic.exception.UserNotFoundException;
 import com.w1kt0rx.medicalclinic.mapper.DoctorMapper;
+import com.w1kt0rx.medicalclinic.mapper.PageRequestMapper;
 import com.w1kt0rx.medicalclinic.model.Address;
 import com.w1kt0rx.medicalclinic.model.Clinic;
 import com.w1kt0rx.medicalclinic.model.Doctor;
@@ -46,6 +44,7 @@ public class DoctorServiceTest {
     UserRepository userRepository;
     ClinicRepository clinicRepository;
     DoctorMapper doctorMapper;
+    PageRequestMapper pageRequestMapper;
 
     @BeforeEach
     void setup() {
@@ -53,7 +52,8 @@ public class DoctorServiceTest {
         this.userRepository = Mockito.mock(UserRepository.class);
         this.clinicRepository = Mockito.mock(ClinicRepository.class);
         this.doctorMapper = Mappers.getMapper(DoctorMapper.class);
-        this.doctorService = new DoctorService(doctorRepository, userRepository, clinicRepository, doctorMapper);
+        this.pageRequestMapper = Mappers.getMapper(PageRequestMapper.class);
+        this.doctorService = new DoctorService(doctorRepository, userRepository, clinicRepository, doctorMapper, pageRequestMapper);
     }
 
     @Test
@@ -148,21 +148,24 @@ public class DoctorServiceTest {
         User user2 = new User(2L, "example2@email.com", "password", "Anna", "Nowak", "321321321", null, null);
         Doctor doctor1 = new Doctor(1L, "Kardiolog", user1, new HashSet<>(), List.of());
         Doctor doctor2 = new Doctor(2L, "Chirurg", user2, new HashSet<>(), List.of());
-        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<Doctor> doctorPage = new PageImpl<>(List.of(doctor1, doctor2), pageable, 2);
+        PageRequestDto pageRequestDto = new PageRequestDto(0, 20, "id", "asc");
+        Pageable expectedPageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "id"));
+        Page<Doctor> doctorPage = new PageImpl<>(List.of(doctor1, doctor2), expectedPageable, 2);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(doctorRepository.findAll(pageable)).thenReturn(doctorPage);
+        when(doctorRepository.findAll(any(Pageable.class))).thenReturn(doctorPage);
         //when
-        Page<DoctorDto> result = doctorService.findAll(pageable);
+        PageDto<DoctorDto> result = doctorService.findAll(pageRequestDto);
         //then
         Mockito.verify(doctorRepository).findAll(pageableCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(2, result.getTotalElements()),
-                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
-                () -> Assertions.assertEquals("Kardiolog", result.getContent().getFirst().specialization()),
-                () -> Assertions.assertEquals(2L, result.getContent().get(1).id()),
-                () -> Assertions.assertEquals("Chirurg", result.getContent().get(1).specialization()),
-                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
+                () -> Assertions.assertEquals(2, result.content().size()),
+                () -> Assertions.assertEquals(1L, result.content().getFirst().id()),
+                () -> Assertions.assertEquals("Kardiolog", result.content().getFirst().specialization()),
+                () -> Assertions.assertEquals(2L, result.content().get(1).id()),
+                () -> Assertions.assertEquals("Chirurg", result.content().get(1).specialization()),
+                () -> Assertions.assertEquals(2, result.totalElements()),
+                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber()),
+                () -> Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize())
         );
     }
 

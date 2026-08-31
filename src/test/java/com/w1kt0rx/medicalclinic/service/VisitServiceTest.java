@@ -2,6 +2,8 @@ package com.w1kt0rx.medicalclinic.service;
 
 import com.w1kt0rx.medicalclinic.command.CreateVisitCommand;
 import com.w1kt0rx.medicalclinic.command.RegisterPatientForVisitCommand;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.dto.VisitDto;
 import com.w1kt0rx.medicalclinic.exception.DoctorNotFoundException;
 import com.w1kt0rx.medicalclinic.exception.IllegalDateException;
@@ -9,6 +11,7 @@ import com.w1kt0rx.medicalclinic.exception.PatientNotFoundException;
 import com.w1kt0rx.medicalclinic.exception.VisitAlreadyReservedException;
 import com.w1kt0rx.medicalclinic.exception.VisitNotFoundException;
 import com.w1kt0rx.medicalclinic.exception.VisitOverlapException;
+import com.w1kt0rx.medicalclinic.mapper.PageRequestMapper;
 import com.w1kt0rx.medicalclinic.mapper.VisitMapper;
 import com.w1kt0rx.medicalclinic.model.Doctor;
 import com.w1kt0rx.medicalclinic.model.Patient;
@@ -42,6 +45,7 @@ public class VisitServiceTest {
     DoctorRepository doctorRepository;
     PatientRepository patientRepository;
     VisitMapper visitMapper;
+    PageRequestMapper pageRequestMapper;
 
     @BeforeEach
     void setup() {
@@ -49,7 +53,8 @@ public class VisitServiceTest {
         this.doctorRepository = Mockito.mock(DoctorRepository.class);
         this.patientRepository = Mockito.mock(PatientRepository.class);
         this.visitMapper = Mappers.getMapper(VisitMapper.class);
-        this.visitService = new VisitService(visitRepository, doctorRepository, patientRepository, visitMapper);
+        this.pageRequestMapper = Mappers.getMapper(PageRequestMapper.class);
+        this.visitService = new VisitService(visitRepository, doctorRepository, patientRepository, visitMapper, pageRequestMapper);
     }
 
     @Test
@@ -273,19 +278,22 @@ public class VisitServiceTest {
         Doctor doctor = new Doctor(1L, "Kardiolog", null, new HashSet<>(), new ArrayList<>());
         Visit visit1 = new Visit(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctor, null);
         Visit visit2 = new Visit(2L, LocalDateTime.of(2026, 12, 23, 10, 0), LocalDateTime.of(2026, 12, 23, 11, 0), doctor, null);
-        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<Visit> visitPage = new PageImpl<>(List.of(visit1, visit2), pageable, 2);
+        PageRequestDto pageRequestDto = new PageRequestDto(0, 20, "id", "asc");
+        Pageable expectedPageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "id"));
+        Page<Visit> visitPage = new PageImpl<>(List.of(visit1, visit2), expectedPageable, 2);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(visitRepository.findAll(pageable)).thenReturn(visitPage);
+        when(visitRepository.findAll(any(Pageable.class))).thenReturn(visitPage);
         //when
-        Page<VisitDto> result = visitService.findAll(pageable);
+        PageDto<VisitDto> result = visitService.findAll(pageRequestDto);
         //then
         Mockito.verify(visitRepository).findAll(pageableCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(2, result.getTotalElements()),
-                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
-                () -> Assertions.assertEquals(2L, result.getContent().get(1).id()),
-                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
+                () -> Assertions.assertEquals(2, result.content().size()),
+                () -> Assertions.assertEquals(1L, result.content().getFirst().id()),
+                () -> Assertions.assertEquals(2L, result.content().get(1).id()),
+                () -> Assertions.assertEquals(2, result.totalElements()),
+                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber()),
+                () -> Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize())
         );
     }
 
@@ -294,19 +302,21 @@ public class VisitServiceTest {
         //given
         Doctor doctor = new Doctor(1L, "Kardiolog", null, new HashSet<>(), new ArrayList<>());
         Visit visit = new Visit(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctor, null);
-        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<Visit> visitPage = new PageImpl<>(List.of(visit), pageable, 1);
+        PageRequestDto pageRequestDto = new PageRequestDto(0, 20, "id", "asc");
+        Pageable expectedPageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "id"));
+        Page<Visit> visitPage = new PageImpl<>(List.of(visit), expectedPageable, 1);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(visitRepository.findByPatientIsNull(pageable)).thenReturn(visitPage);
+        when(visitRepository.findByPatientIsNull(any(Pageable.class))).thenReturn(visitPage);
         //when
-        Page<VisitDto> result = visitService.findFreeVisits(pageable);
+        PageDto<VisitDto> result = visitService.findFreeVisits(pageRequestDto);
         //then
         Mockito.verify(visitRepository).findByPatientIsNull(pageableCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(1, result.getTotalElements()),
-                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
-                () -> Assertions.assertNull(result.getContent().getFirst().patient()),
-                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
+                () -> Assertions.assertEquals(1, result.content().size()),
+                () -> Assertions.assertEquals(1L, result.content().getFirst().id()),
+                () -> Assertions.assertNull(result.content().getFirst().patient()),
+                () -> Assertions.assertEquals(1, result.totalElements()),
+                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber())
         );
     }
 
@@ -317,21 +327,21 @@ public class VisitServiceTest {
         User user = new User(1L, "example@email.com", "password", "John", "Surname", "123123123", null, null);
         Patient patient = new Patient(1L, "123123", LocalDate.of(1990, 1, 1), user, new ArrayList<>());
         Visit visit = new Visit(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctor, patient);
-        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<Visit> visitPage = new PageImpl<>(List.of(visit), pageable, 1);
+        PageRequestDto pageRequestDto = new PageRequestDto(0, 20, "id", "asc");
+        Pageable expectedPageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "id"));
+        Page<Visit> visitPage = new PageImpl<>(List.of(visit), expectedPageable, 1);
         ArgumentCaptor<Long> patientIdCaptor = ArgumentCaptor.forClass(Long.class);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(visitRepository.findByPatientId(patient.getId(), pageable)).thenReturn(visitPage);
+        when(visitRepository.findByPatientId(any(Long.class), any(Pageable.class))).thenReturn(visitPage);
         //when
-        Page<VisitDto> result = visitService.findPatientVisits(patient.getId(), pageable);
+        PageDto<VisitDto> result = visitService.findPatientVisits(patient.getId(), pageRequestDto);
         //then
         Mockito.verify(visitRepository).findByPatientId(patientIdCaptor.capture(), pageableCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(1, result.getTotalElements()),
-                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
-                () -> Assertions.assertEquals(1L, result.getContent().getFirst().patient().id()),
-                () -> Assertions.assertEquals(1L, patientIdCaptor.getValue()),
-                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
+                () -> Assertions.assertEquals(1, result.content().size()),
+                () -> Assertions.assertEquals(1L, result.content().getFirst().id()),
+                () -> Assertions.assertEquals(1L, result.content().getFirst().patient().id()),
+                () -> Assertions.assertEquals(1L, patientIdCaptor.getValue())
         );
     }
 }

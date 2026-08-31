@@ -3,10 +3,13 @@ package com.w1kt0rx.medicalclinic.service;
 import com.w1kt0rx.medicalclinic.command.CreateClinicCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateClinicCommand;
 import com.w1kt0rx.medicalclinic.dto.ClinicDto;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.exception.ClinicAlreadyExistsException;
 import com.w1kt0rx.medicalclinic.exception.ClinicNotFoundException;
 import com.w1kt0rx.medicalclinic.mapper.AddressMapper;
 import com.w1kt0rx.medicalclinic.mapper.ClinicMapper;
+import com.w1kt0rx.medicalclinic.mapper.PageRequestMapper;
 import com.w1kt0rx.medicalclinic.model.Address;
 import com.w1kt0rx.medicalclinic.model.Clinic;
 import com.w1kt0rx.medicalclinic.repository.ClinicRepository;
@@ -31,13 +34,15 @@ public class ClinicServiceTest {
     ClinicService clinicService;
     ClinicRepository clinicRepository;
     ClinicMapper clinicMapper;
+    PageRequestMapper pageRequestMapper;
 
     @BeforeEach
     void setup() {
         this.clinicRepository = Mockito.mock(ClinicRepository.class);
         this.clinicMapper = Mappers.getMapper(ClinicMapper.class);
         ReflectionTestUtils.setField(clinicMapper, "addressMapper", Mappers.getMapper(AddressMapper.class));
-        this.clinicService = new ClinicService(clinicRepository, clinicMapper);
+        this.pageRequestMapper = Mappers.getMapper(PageRequestMapper.class);
+        this.clinicService = new ClinicService(clinicRepository, clinicMapper, pageRequestMapper);
     }
 
     @Test
@@ -114,22 +119,24 @@ public class ClinicServiceTest {
         Address address2 = new Address(2L, "Krakow", "30-001", "Zielona", "5", null);
         Clinic clinic1 = new Clinic(1L, "Zdrowie", address1, new HashSet<>());
         Clinic clinic2 = new Clinic(2L, "Nowa Klinika", address2, new HashSet<>());
-        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<Clinic> clinicPage = new PageImpl<>(List.of(clinic1, clinic2), pageable, 2);
+        PageRequestDto pageRequestDto = new PageRequestDto(0, 20, "id", "asc");
+        Pageable expectedPageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "id"));
+        Page<Clinic> clinicPage = new PageImpl<>(List.of(clinic1, clinic2), expectedPageable, 2);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(clinicRepository.findAll(pageable)).thenReturn(clinicPage);
+        when(clinicRepository.findAll(any(Pageable.class))).thenReturn(clinicPage);
         //when
-        Page<ClinicDto> result = clinicService.findAll(pageable);
+        PageDto<ClinicDto> result = clinicService.findAll(pageRequestDto);
         //then
         Mockito.verify(clinicRepository).findAll(pageableCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(2, result.getTotalElements()),
-                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
-                () -> Assertions.assertEquals("Zdrowie", result.getContent().getFirst().name()),
-                () -> Assertions.assertEquals("Warszawa", result.getContent().getFirst().address().city()),
-                () -> Assertions.assertEquals(2L, result.getContent().get(1).id()),
-                () -> Assertions.assertEquals("Nowa Klinika", result.getContent().get(1).name()),
-                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
+                () -> Assertions.assertEquals(2, result.content().size()),
+                () -> Assertions.assertEquals(1L, result.content().getFirst().id()),
+                () -> Assertions.assertEquals("Zdrowie", result.content().getFirst().name()),
+                () -> Assertions.assertEquals("Warszawa", result.content().getFirst().address().city()),
+                () -> Assertions.assertEquals(2L, result.content().get(1).id()),
+                () -> Assertions.assertEquals(2, result.totalElements()),
+                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber()),
+                () -> Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize())
         );
     }
 

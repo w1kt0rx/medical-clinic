@@ -3,6 +3,8 @@ package com.w1kt0rx.medicalclinic.controller;
 import com.w1kt0rx.medicalclinic.command.CreateUserCommand;
 import com.w1kt0rx.medicalclinic.command.UpdatePasswordCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateUserCommand;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.dto.UserDto;
 import com.w1kt0rx.medicalclinic.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,13 +16,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
@@ -57,7 +59,7 @@ public class UserController {
                                     }
                                     """)))
             @RequestBody CreateUserCommand command) {
-
+        log.debug("POST /users - email={}", command.email());
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.create(command));
     }
 
@@ -71,6 +73,7 @@ public class UserController {
     public ResponseEntity<Void> delete(
             @Parameter(description = "Email address of the user to delete", example = "jacek@gmail.com")
             @PathVariable String email) {
+        log.debug("DELETE /users/{}", email);
         userService.delete(email);
         return ResponseEntity.noContent().build();
     }
@@ -78,9 +81,10 @@ public class UserController {
     @Operation(summary = "Get all users", description = "Retrieves a list of all registered users.")
     @ApiResponse(responseCode = "200", description = "Page of users retrieved successfully")
     @GetMapping
-    public ResponseEntity<Page<UserDto>> findAll(
-            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
-        return ResponseEntity.ok(userService.findAll(pageable));
+    public ResponseEntity<PageDto<UserDto>> findAll(
+            @ParameterObject PageRequestDto pageRequestDto) {
+        log.debug("GET /users - page={}, size={}", pageRequestDto.page(), pageRequestDto.size());
+        return ResponseEntity.ok(userService.findAll(pageRequestDto));
     }
 
     @Operation(summary = "Get user by email", description = "Retrieves details of a specific user by their email address.")
@@ -95,6 +99,7 @@ public class UserController {
     public ResponseEntity<UserDto> findByEmail(
             @Parameter(description = "Email address of the user to retrieve", example = "jacek@gmail.com")
             @PathVariable String email) {
+        log.debug("GET /users/{}", email);
         return ResponseEntity.ok(userService.findByEmail(email));
     }
 
@@ -126,7 +131,7 @@ public class UserController {
                                     }
                                     """)))
             @RequestBody UpdateUserCommand command) {
-
+        log.debug("PUT /users/{}", email);
         return ResponseEntity.ok(userService.update(email, command));
     }
 
@@ -154,7 +159,7 @@ public class UserController {
                                     }
                                     """)))
             @RequestBody UpdatePasswordCommand command) {
-
+        log.debug("PATCH /users/{}/password", email);
         userService.updatePassword(email, command.password());
         return ResponseEntity.noContent().build();
     }

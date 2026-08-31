@@ -2,11 +2,12 @@ package com.w1kt0rx.medicalclinic.controller;
 
 import com.w1kt0rx.medicalclinic.command.CreatePatientCommand;
 import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.dto.PatientDto;
 import com.w1kt0rx.medicalclinic.service.PatientService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,14 +15,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
+@Slf4j
 @RestController
 @RequestMapping("/patients")
 @RequiredArgsConstructor
@@ -55,7 +55,7 @@ public class PatientController {
                                     }
                                     """)))
             @RequestBody CreatePatientCommand command) {
-
+        log.debug("POST /patients - idCardNo={}", command.idCardNo());
         return ResponseEntity.status(HttpStatus.CREATED).body(patientService.create(command));
     }
 
@@ -69,6 +69,7 @@ public class PatientController {
     public ResponseEntity<Void> delete(
             @Parameter(description = "ID of the patient to be deleted", example = "1")
             @PathVariable Long id) {
+        log.debug("DELETE /patients/{}", id);
         patientService.delete(id);
         return ResponseEntity.noContent().build();
     }
@@ -76,9 +77,10 @@ public class PatientController {
     @Operation(summary = "Get all patients", description = "Retrieves a list of all registered patients.")
     @ApiResponse(responseCode = "200", description = "Page of patients retrieved successfully")
     @GetMapping
-    public ResponseEntity<Page<PatientDto>> findAll(
-            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
-        return ResponseEntity.ok(patientService.findAll(pageable));
+    public ResponseEntity<PageDto<PatientDto>> findAll(
+            @ParameterObject PageRequestDto pageRequestDto) {
+        log.debug("GET /patients - page={}, size={}", pageRequestDto.page(), pageRequestDto.size());
+        return ResponseEntity.ok(patientService.findAll(pageRequestDto));
     }
 
     @Operation(summary = "Get patient by ID", description = "Retrieves details of a specific patient by ID.")
@@ -93,6 +95,7 @@ public class PatientController {
     public ResponseEntity<PatientDto> findById(
             @Parameter(description = "ID of the patient to retrieve", example = "1")
             @PathVariable Long id) {
+        log.debug("GET /patients/{}", id);
         return ResponseEntity.ok(patientService.findById(id));
     }
 
@@ -123,6 +126,7 @@ public class PatientController {
                                     }
                                     """)))
             @RequestBody UpdatePatientCommand command) {
+        log.debug("PUT /patients/{}", id);
         return ResponseEntity.ok(patientService.update(id, command));
     }
 }

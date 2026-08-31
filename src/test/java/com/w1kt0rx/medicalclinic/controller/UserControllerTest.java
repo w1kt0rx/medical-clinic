@@ -3,6 +3,8 @@ package com.w1kt0rx.medicalclinic.controller;
 import com.w1kt0rx.medicalclinic.command.CreateUserCommand;
 import com.w1kt0rx.medicalclinic.command.UpdatePasswordCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateUserCommand;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.dto.UserDto;
 import com.w1kt0rx.medicalclinic.exception.EmailAlreadyInUseException;
 import com.w1kt0rx.medicalclinic.exception.UserNotFoundException;
@@ -24,6 +26,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -100,23 +103,24 @@ public class UserControllerTest {
         UserDto user1 = new UserDto(1L, "jacek@gmail.com", "Jacek", "Placek", "123123123");
         UserDto user2 = new UserDto(2L, "anna@gmail.com", "Anna", "Nowak", "321321321");
         Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<UserDto> page = new PageImpl<>(List.of(user1, user2), pageable, 2);
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(userService.findAll(any(Pageable.class))).thenReturn(page);
+        PageDto<UserDto> page = PageDto.from(new PageImpl<>(List.of(user1, user2), pageable, 2));
+        ArgumentCaptor<PageRequestDto> dtoCaptor = ArgumentCaptor.forClass(PageRequestDto.class);
+        when(userService.findAll(any(PageRequestDto.class))).thenReturn(page);
         //when + then
         mockMvc.perform(get("/users")
                         .param("page", "0")
                         .param("size", "20")
-                        .param("sort", "id,asc"))
+                        .param("sortBy", "id")
+                        .param("direction", "asc"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content", hasSize(2)))
                 .andExpect(jsonPath("$.content[0].email").value("jacek@gmail.com"))
                 .andExpect(jsonPath("$.content[1].email").value("anna@gmail.com"))
-                .andExpect(jsonPath("$.page.totalElements").value(2));
-        Mockito.verify(userService).findAll(pageableCaptor.capture());
+                .andExpect(jsonPath("$.totalElements").value(2));
+        Mockito.verify(userService).findAll(dtoCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber()),
-                () -> Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize())
+                () -> Assertions.assertEquals(0, dtoCaptor.getValue().page()),
+                () -> Assertions.assertEquals(20, dtoCaptor.getValue().size())
         );
     }
 

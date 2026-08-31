@@ -2,6 +2,8 @@ package com.w1kt0rx.medicalclinic.controller;
 
 import com.w1kt0rx.medicalclinic.command.CreatePatientCommand;
 import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.dto.PatientDto;
 import com.w1kt0rx.medicalclinic.dto.UserDto;
 import com.w1kt0rx.medicalclinic.exception.PatientNotFoundException;
@@ -74,42 +76,47 @@ public class PatientControllerTest {
         PatientDto patient1 = new PatientDto(1L, "123123", LocalDate.of(2026, 12, 22), userDto);
         PatientDto patient2 = new PatientDto(2L, "456456", LocalDate.of(1995, 5, 10), userDto);
         Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<PatientDto> page = new PageImpl<>(List.of(patient1, patient2), pageable, 2);
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(patientService.findAll(any(Pageable.class))).thenReturn(page);
+        PageDto<PatientDto> page = PageDto.from(new PageImpl<>(List.of(patient1, patient2), pageable, 2));
+        ArgumentCaptor<PageRequestDto> dtoCaptor = ArgumentCaptor.forClass(PageRequestDto.class);
+        when(patientService.findAll(any(PageRequestDto.class))).thenReturn(page);
         //when + then
         mockMvc.perform(get("/patients")
                         .param("page", "0")
                         .param("size", "20")
-                        .param("sort", "id,asc"))
+                        .param("sortBy", "id")
+                        .param("direction", "asc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.content[0].id").value(1L))
                 .andExpect(jsonPath("$.content[1].id").value(2L))
-                .andExpect(jsonPath("$.page.totalElements").value(2))
-                .andExpect(jsonPath("$.page.size").value(20))
-                .andExpect(jsonPath("$.page.number").value(0));
-        Mockito.verify(patientService).findAll(pageableCaptor.capture());
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20));
+        Mockito.verify(patientService).findAll(dtoCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber()),
-                () -> Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize())
+                () -> Assertions.assertEquals(0, dtoCaptor.getValue().page()),
+                () -> Assertions.assertEquals(20, dtoCaptor.getValue().size()),
+                () -> Assertions.assertEquals("id", dtoCaptor.getValue().sortBy()),
+                () -> Assertions.assertEquals("asc", dtoCaptor.getValue().direction())
         );
     }
 
     @Test
-    void findAll_noParamsProvided_usesPageableDefault() throws Exception {
+    void findAll_noParamsProvided_stillReturnsOk() throws Exception {
         //given
-        Page<PatientDto> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(patientService.findAll(any(Pageable.class))).thenReturn(emptyPage);
+        PageDto<PatientDto> emptyPage = PageDto.from(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+        ArgumentCaptor<PageRequestDto> dtoCaptor = ArgumentCaptor.forClass(PageRequestDto.class);
+        when(patientService.findAll(any(PageRequestDto.class))).thenReturn(emptyPage);
         //when + then
         mockMvc.perform(get("/patients"))
                 .andExpect(status().isOk());
-        Mockito.verify(patientService).findAll(pageableCaptor.capture());
+        Mockito.verify(patientService).findAll(dtoCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber()),
-                () -> Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize()),
-                () -> Assertions.assertNotNull(pageableCaptor.getValue().getSort().getOrderFor("id"))
+                () -> Assertions.assertNull(dtoCaptor.getValue().page()),
+                () -> Assertions.assertNull(dtoCaptor.getValue().size()),
+                () -> Assertions.assertNull(dtoCaptor.getValue().sortBy()),
+                () -> Assertions.assertNull(dtoCaptor.getValue().direction())
         );
     }
 

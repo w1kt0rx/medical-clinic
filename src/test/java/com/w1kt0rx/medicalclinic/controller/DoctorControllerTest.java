@@ -2,10 +2,7 @@ package com.w1kt0rx.medicalclinic.controller;
 
 import com.w1kt0rx.medicalclinic.command.CreateDoctorCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateDoctorCommand;
-import com.w1kt0rx.medicalclinic.dto.AddressDto;
-import com.w1kt0rx.medicalclinic.dto.ClinicDto;
-import com.w1kt0rx.medicalclinic.dto.DoctorDto;
-import com.w1kt0rx.medicalclinic.dto.UserDto;
+import com.w1kt0rx.medicalclinic.dto.*;
 import com.w1kt0rx.medicalclinic.exception.ClinicAlreadyAssignedException;
 import com.w1kt0rx.medicalclinic.exception.ClinicNotAssignedException;
 import com.w1kt0rx.medicalclinic.exception.ClinicNotFoundException;
@@ -31,6 +28,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Set;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -67,7 +65,7 @@ public class DoctorControllerTest {
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.specialization").value("Kardiolog"))
                 .andExpect(jsonPath("$.user.email").value("example@email.com"))
-                .andExpect(jsonPath("$.clinics.length()").value(1));
+                .andExpect(jsonPath("$.clinics", hasSize(1)));
         Mockito.verify(doctorService).create(commandCaptor.capture());
         Assertions.assertAll(
                 () -> Assertions.assertEquals("Kardiolog", commandCaptor.getValue().specialization()),
@@ -125,23 +123,24 @@ public class DoctorControllerTest {
         DoctorDto doctor1 = new DoctorDto(1L, "Kardiolog", userDto, Set.of());
         DoctorDto doctor2 = new DoctorDto(2L, "Chirurg", userDto, Set.of());
         Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<DoctorDto> page = new PageImpl<>(List.of(doctor1, doctor2), pageable, 2);
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(doctorService.findAll(any(Pageable.class))).thenReturn(page);
+        PageDto<DoctorDto> page = PageDto.from(new PageImpl<>(List.of(doctor1, doctor2), pageable, 2));
+        ArgumentCaptor<PageRequestDto> dtoCaptor = ArgumentCaptor.forClass(PageRequestDto.class);
+        when(doctorService.findAll(any(PageRequestDto.class))).thenReturn(page);
         //when + then
         mockMvc.perform(get("/doctors")
                         .param("page", "0")
                         .param("size", "20")
-                        .param("sort", "id,asc"))
+                        .param("sortBy", "id")
+                        .param("direction", "asc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.content[0].id").value(1L))
                 .andExpect(jsonPath("$.content[1].id").value(2L))
-                .andExpect(jsonPath("$.page.totalElements").value(2));
-        Mockito.verify(doctorService).findAll(pageableCaptor.capture());
+                .andExpect(jsonPath("$.totalElements").value(2));
+        Mockito.verify(doctorService).findAll(dtoCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber()),
-                () -> Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize())
+                () -> Assertions.assertEquals(0, dtoCaptor.getValue().page()),
+                () -> Assertions.assertEquals(20, dtoCaptor.getValue().size())
         );
     }
 

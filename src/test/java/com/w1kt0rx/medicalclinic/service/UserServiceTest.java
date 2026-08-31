@@ -2,9 +2,12 @@ package com.w1kt0rx.medicalclinic.service;
 
 import com.w1kt0rx.medicalclinic.command.CreateUserCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateUserCommand;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.dto.UserDto;
 import com.w1kt0rx.medicalclinic.exception.EmailAlreadyInUseException;
 import com.w1kt0rx.medicalclinic.exception.UserNotFoundException;
+import com.w1kt0rx.medicalclinic.mapper.PageRequestMapper;
 import com.w1kt0rx.medicalclinic.mapper.UserMapper;
 import com.w1kt0rx.medicalclinic.model.User;
 import com.w1kt0rx.medicalclinic.repository.UserRepository;
@@ -27,12 +30,14 @@ public class UserServiceTest {
     UserService userService;
     UserRepository userRepository;
     UserMapper userMapper;
+    PageRequestMapper pageRequestMapper;
 
     @BeforeEach
     void setup() {
         userRepository = Mockito.mock(UserRepository.class);
         userMapper = Mappers.getMapper(UserMapper.class);
-        userService = new UserService(userRepository, userMapper);
+        pageRequestMapper = Mappers.getMapper(PageRequestMapper.class);
+        userService = new UserService(userRepository, userMapper, pageRequestMapper);
     }
 
     @Test
@@ -78,21 +83,23 @@ public class UserServiceTest {
         //given
         User user1 = new User(1L, "example1@gmail.com", "haslo1", "Jacek", "Placek", "123123123", null, null);
         User user2 = new User(2L, "example2@gmail.com", "haslo2", "Marcin", "Radzki", "321321321", null, null);
-        Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<User> userPage = new PageImpl<>(List.of(user1, user2), pageable, 2);
+        PageRequestDto pageRequestDto = new PageRequestDto(0, 20, "id", "asc");
+        Pageable expectedPageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "id"));
+        Page<User> userPage = new PageImpl<>(List.of(user1, user2), expectedPageable, 2);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(userRepository.findAll(pageable)).thenReturn(userPage);
+        when(userRepository.findAll(any(Pageable.class))).thenReturn(userPage);
         //when
-        Page<UserDto> result = userService.findAll(pageable);
+        PageDto<UserDto> result = userService.findAll(pageRequestDto);
         //then
         Mockito.verify(userRepository).findAll(pageableCaptor.capture());
         Assertions.assertAll(
-                () -> Assertions.assertEquals(2, result.getTotalElements()),
-                () -> Assertions.assertEquals(1L, result.getContent().getFirst().id()),
-                () -> Assertions.assertEquals("example1@gmail.com", result.getContent().getFirst().email()),
-                () -> Assertions.assertEquals(2L, result.getContent().get(1).id()),
-                () -> Assertions.assertEquals("example2@gmail.com", result.getContent().get(1).email()),
-                () -> Assertions.assertEquals(pageable, pageableCaptor.getValue())
+                () -> Assertions.assertEquals(2, result.content().size()),
+                () -> Assertions.assertEquals(1L, result.content().getFirst().id()),
+                () -> Assertions.assertEquals("example1@gmail.com", result.content().getFirst().email()),
+                () -> Assertions.assertEquals(2L, result.content().get(1).id()),
+                () -> Assertions.assertEquals(2, result.totalElements()),
+                () -> Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber()),
+                () -> Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize())
         );
     }
 

@@ -3,6 +3,8 @@ package com.w1kt0rx.medicalclinic.controller;
 import com.w1kt0rx.medicalclinic.command.CreateDoctorCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateDoctorCommand;
 import com.w1kt0rx.medicalclinic.dto.DoctorDto;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.service.DoctorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,14 +12,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
+@Slf4j
 @RestController
 @RequestMapping("/doctors")
 @RequiredArgsConstructor
@@ -33,6 +34,7 @@ public class DoctorController {
     })
     @PostMapping
     public ResponseEntity<DoctorDto> create(@RequestBody CreateDoctorCommand command) {
+        log.debug("POST /doctors - userId={}, specialization={}", command.userId(), command.specialization());
         return ResponseEntity.status(HttpStatus.CREATED).body(doctorService.create(command));
     }
 
@@ -45,6 +47,7 @@ public class DoctorController {
     public ResponseEntity<Void> delete(
             @Parameter(description = "ID of the doctor to be deleted", example = "1")
             @PathVariable Long id) {
+        log.debug("DELETE /doctors/{}", id);
         doctorService.delete(id);
         return ResponseEntity.noContent().build();
     }
@@ -52,9 +55,10 @@ public class DoctorController {
     @Operation(summary = "Get all doctors", description = "Retrieves a list of all registered doctors.")
     @ApiResponse(responseCode = "200", description = "Page of doctors retrieved successfully")
     @GetMapping
-    public ResponseEntity<Page<DoctorDto>> findAll(
-            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
-        return ResponseEntity.ok(doctorService.findAll(pageable));
+    public ResponseEntity<PageDto<DoctorDto>> findAll(
+            @ParameterObject PageRequestDto pageRequestDto) {
+        log.debug("GET /doctors - page={}, size={}", pageRequestDto.page(), pageRequestDto.size());
+        return ResponseEntity.ok(doctorService.findAll(pageRequestDto));
     }
 
     @Operation(summary = "Get doctor by ID", description = "Retrieves details of a specific doctor by ID.")
@@ -66,6 +70,7 @@ public class DoctorController {
     public ResponseEntity<DoctorDto> findById(
             @Parameter(description = "ID of the doctor to retrieve", example = "1")
             @PathVariable Long id) {
+        log.debug("GET /doctors/{}", id);
         return ResponseEntity.ok(doctorService.findById(id));
     }
 
@@ -80,6 +85,7 @@ public class DoctorController {
             @Parameter(description = "ID of the doctor to update", example = "1")
             @PathVariable Long id,
             @RequestBody UpdateDoctorCommand command) {
+        log.debug("PUT /doctors/{}", id);
         return ResponseEntity.ok(doctorService.update(id, command));
     }
 
@@ -94,7 +100,7 @@ public class DoctorController {
             @PathVariable Long doctorId,
             @Parameter(description = "ID of the clinic to assign", example = "2")
             @PathVariable Long clinicId) {
-
+        log.debug("POST /doctors/{}/clinics/{}", doctorId, clinicId);
         return ResponseEntity.ok(doctorService.addClinic(doctorId, clinicId));
     }
 
@@ -109,7 +115,7 @@ public class DoctorController {
             @PathVariable Long doctorId,
             @Parameter(description = "ID of the clinic to remove", example = "2")
             @PathVariable Long clinicId) {
-
+        log.debug("DELETE /doctors/{}/clinics/{}", doctorId, clinicId);
         return ResponseEntity.ok(doctorService.removeClinic(doctorId, clinicId));
     }
 }

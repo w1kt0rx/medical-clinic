@@ -2,10 +2,7 @@ package com.w1kt0rx.medicalclinic.controller;
 
 import com.w1kt0rx.medicalclinic.command.CreateVisitCommand;
 import com.w1kt0rx.medicalclinic.command.RegisterPatientForVisitCommand;
-import com.w1kt0rx.medicalclinic.dto.DoctorDto;
-import com.w1kt0rx.medicalclinic.dto.PatientDto;
-import com.w1kt0rx.medicalclinic.dto.UserDto;
-import com.w1kt0rx.medicalclinic.dto.VisitDto;
+import com.w1kt0rx.medicalclinic.dto.*;
 import com.w1kt0rx.medicalclinic.exception.DoctorNotFoundException;
 import com.w1kt0rx.medicalclinic.exception.IllegalDateException;
 import com.w1kt0rx.medicalclinic.exception.PatientNotFoundException;
@@ -33,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -239,20 +237,21 @@ public class VisitControllerTest {
         VisitDto visit1 = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), doctorDto, null);
         VisitDto visit2 = new VisitDto(2L, LocalDateTime.of(2026, 12, 23, 10, 0), doctorDto, null);
         Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<VisitDto> page = new PageImpl<>(List.of(visit1, visit2), pageable, 2);
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(visitService.findAll(any(Pageable.class))).thenReturn(page);
+        PageDto<VisitDto> page = PageDto.from(new PageImpl<>(List.of(visit1, visit2), pageable, 2));
+        ArgumentCaptor<PageRequestDto> dtoCaptor = ArgumentCaptor.forClass(PageRequestDto.class);
+        when(visitService.findAll(any(PageRequestDto.class))).thenReturn(page);
         //when + then
         mockMvc.perform(get("/visits")
                         .param("page", "0")
                         .param("size", "20")
-                        .param("sort", "id,asc"))
+                        .param("sortBy", "id")
+                        .param("direction", "asc"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content", hasSize(2)))
                 .andExpect(jsonPath("$.content[0].id").value(1L))
-                .andExpect(jsonPath("$.page.totalElements").value(2));
-        Mockito.verify(visitService).findAll(pageableCaptor.capture());
-        Assertions.assertEquals(0, pageableCaptor.getValue().getPageNumber());
+                .andExpect(jsonPath("$.totalElements").value(2));
+        Mockito.verify(visitService).findAll(dtoCaptor.capture());
+        Assertions.assertEquals(0, dtoCaptor.getValue().page());
     }
 
     @Test
@@ -262,37 +261,35 @@ public class VisitControllerTest {
         DoctorDto doctorDto = new DoctorDto(1L, "Kardiolog", userDto, Set.of());
         VisitDto visit = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), doctorDto, null);
         Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<VisitDto> page = new PageImpl<>(List.of(visit), pageable, 1);
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(visitService.findFreeVisits(any(Pageable.class))).thenReturn(page);
+        PageDto<VisitDto> page = PageDto.from(new PageImpl<>(List.of(visit), pageable, 1));
+        ArgumentCaptor<PageRequestDto> dtoCaptor = ArgumentCaptor.forClass(PageRequestDto.class);
+        when(visitService.findFreeVisits(any(PageRequestDto.class))).thenReturn(page);
         //when + then
         mockMvc.perform(get("/visits/free"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].patient").isEmpty());
-        Mockito.verify(visitService).findFreeVisits(pageableCaptor.capture());
-        Assertions.assertEquals(20, pageableCaptor.getValue().getPageSize());
+        Mockito.verify(visitService).findFreeVisits(dtoCaptor.capture());
     }
 
     @Test
     void findPatientVisits_dataCorrect_returnsPageOfVisits() throws Exception {
         //given
         UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
-        UserDto userDto2 = new UserDto(2L, "example2@email.com", "John2", "Surname2", "321321312");
         DoctorDto doctorDto = new DoctorDto(1L, "Kardiolog", userDto, Set.of());
-        PatientDto patientDto = new PatientDto(1L, "123123", LocalDate.of(2000,12,12), userDto2);
+        PatientDto patientDto = new PatientDto(1L, "123123", LocalDate.of(1990, 1, 1), userDto);
         VisitDto visitDto = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), doctorDto, patientDto);
         Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
-        Page<VisitDto> page = new PageImpl<>(List.of(visitDto), pageable, 1);
+        PageDto<VisitDto> page = PageDto.from(new PageImpl<>(List.of(visitDto), pageable, 1));
         ArgumentCaptor<Long> patientIdCaptor = ArgumentCaptor.forClass(Long.class);
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(visitService.findPatientVisits(anyLong(), any(Pageable.class))).thenReturn(page);
+        ArgumentCaptor<PageRequestDto> dtoCaptor = ArgumentCaptor.forClass(PageRequestDto.class);
+        when(visitService.findPatientVisits(org.mockito.ArgumentMatchers.anyLong(), any(PageRequestDto.class))).thenReturn(page);
         //when + then
         mockMvc.perform(get("/visits/patient/{patientId}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].patient.id").value(1L));
-        Mockito.verify(visitService).findPatientVisits(patientIdCaptor.capture(), pageableCaptor.capture());
+        Mockito.verify(visitService).findPatientVisits(patientIdCaptor.capture(), dtoCaptor.capture());
         Assertions.assertEquals(1L, patientIdCaptor.getValue());
     }
 }

@@ -3,6 +3,8 @@ package com.w1kt0rx.medicalclinic.controller;
 import com.w1kt0rx.medicalclinic.command.CreateClinicCommand;
 import com.w1kt0rx.medicalclinic.command.UpdateClinicCommand;
 import com.w1kt0rx.medicalclinic.dto.ClinicDto;
+import com.w1kt0rx.medicalclinic.dto.PageDto;
+import com.w1kt0rx.medicalclinic.dto.PageRequestDto;
 import com.w1kt0rx.medicalclinic.service.ClinicService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,13 +12,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/clinics")
 @RequiredArgsConstructor
@@ -32,6 +34,7 @@ public class ClinicController {
     })
     @PostMapping
     public ResponseEntity<ClinicDto> create(@RequestBody CreateClinicCommand command) {
+        log.debug("POST /clinics - name={}", command.name());
         return ResponseEntity.status(HttpStatus.CREATED).body(clinicService.create(command));
     }
 
@@ -44,6 +47,7 @@ public class ClinicController {
     public ResponseEntity<Void> delete(
             @Parameter(description = "ID of the clinic to be deleted", example = "1")
             @PathVariable Long id) {
+        log.debug("DELETE /clinics/{}", id);
         clinicService.delete(id);
         return ResponseEntity.noContent().build();
     }
@@ -51,9 +55,10 @@ public class ClinicController {
     @Operation(summary = "Get all clinics", description = "Retrieves a list of all registered clinics.")
     @ApiResponse(responseCode = "200", description = "Page of clinics retrieved successfully")
     @GetMapping
-    public ResponseEntity<Page<ClinicDto>> findAll(
-            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
-        return ResponseEntity.ok(clinicService.findAll(pageable));
+    public ResponseEntity<PageDto<ClinicDto>> findAll(
+            @ParameterObject PageRequestDto pageRequestDto) {
+        log.debug("GET /clinics - page={}, size={}", pageRequestDto.page(), pageRequestDto.size());
+        return ResponseEntity.ok(clinicService.findAll(pageRequestDto));
     }
 
     @Operation(summary = "Get clinic by ID", description = "Retrieves details of a specific clinic by its ID.")
@@ -65,6 +70,7 @@ public class ClinicController {
     public ResponseEntity<ClinicDto> findById(
             @Parameter(description = "ID of the clinic to retrieve", example = "1")
             @PathVariable Long id) {
+        log.debug("GET /clinics/{}", id);
         return ResponseEntity.ok(clinicService.findById(id));
     }
 
@@ -79,6 +85,7 @@ public class ClinicController {
             @Parameter(description = "ID of the clinic to update", example = "1")
             @PathVariable Long id,
             @RequestBody UpdateClinicCommand command) {
+        log.debug("PUT /clinics/{}", id);
         return ResponseEntity.ok(clinicService.update(id, command));
     }
 }
