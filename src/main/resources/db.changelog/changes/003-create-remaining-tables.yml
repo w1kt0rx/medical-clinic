@@ -1,0 +1,152 @@
+databaseChangeLog:
+  - changeSet:
+      id: "3-1"
+      author: "w1kt0r"
+      changes:
+        - createTable:
+            tableName: doctor
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: specialization
+                  type: VARCHAR(255)
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    unique: true
+        - addForeignKeyConstraint:
+            baseTableName: doctor
+            baseColumnNames: user_id
+            constraintName: fk_doctor_user
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: CASCADE
+
+  - changeSet:
+      id: "3-2"
+      author: "w1kt0rx"
+      changes:
+        - createTable:
+            tableName: address
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: city
+                  type: VARCHAR(255)
+              - column:
+                  name: postal_code
+                  type: VARCHAR(255)
+              - column:
+                  name: street
+                  type: VARCHAR(255)
+              - column:
+                  name: house_number
+                  type: VARCHAR(255)
+
+        - createTable:
+            tableName: clinic
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: address_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    unique: true
+        - addForeignKeyConstraint:
+            baseTableName: clinic
+            baseColumnNames: address_id
+            constraintName: fk_clinic_address
+            referencedTableName: address
+            referencedColumnNames: id
+            onDelete: CASCADE
+
+        - createTable:
+            tableName: doctor_clinic
+            columns:
+              - column:
+                  name: doctor_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: clinic_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: doctor_clinic
+            columnNames: doctor_id, clinic_id
+            constraintName: pk_doctor_clinic
+        - addForeignKeyConstraint:
+            baseTableName: doctor_clinic
+            baseColumnNames: doctor_id
+            constraintName: fk_doctor_clinic_doctor
+            referencedTableName: doctor
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: doctor_clinic
+            baseColumnNames: clinic_id
+            constraintName: fk_doctor_clinic_clinic
+            referencedTableName: clinic
+            referencedColumnNames: id
+
+        - createTable:
+            tableName: visit
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: start_date
+                  type: TIMESTAMP
+              - column:
+                  name: finish_date
+                  type: TIMESTAMP
+              - column:
+                  name: patient_id
+                  type: BIGINT
+              - column:
+                  name: doctor_id
+                  type: BIGINT
+        - addForeignKeyConstraint:
+            baseTableName: visit
+            baseColumnNames: patient_id
+            constraintName: fk_visit_patient
+            referencedTableName: patient
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: visit
+            baseColumnNames: doctor_id
+            constraintName: fk_visit_doctor
+            referencedTableName: doctor
+            referencedColumnNames: id

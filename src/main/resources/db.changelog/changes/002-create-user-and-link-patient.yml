@@ -1,0 +1,55 @@
+databaseChangeLog:
+  - changeSet:
+      id: "2-1"
+      author: "w1kt0rx"
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: password
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: first_name
+                  type: VARCHAR(255)
+              - column:
+                  name: last_name
+                  type: VARCHAR(255)
+              - column:
+                  name: phone_number
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: "2-2"
+      author: "w1kt0rx"
+      changes:
+        - addColumn:
+            tableName: patient
+            columns:
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    unique: true
+        - addForeignKeyConstraint:
+            baseTableName: patient
+            baseColumnNames: user_id
+            constraintName: fk_patient_user
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: CASCADE

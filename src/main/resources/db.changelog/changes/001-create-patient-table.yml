@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: "1"
+      author: "w1kt0r"
+      changes:
+        - createTable:
+            tableName: patient
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: id_card_no
+                  type: VARCHAR(50)
+              - column:
+                  name: birthday
+                  type: DATE

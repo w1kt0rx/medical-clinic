@@ -1,35 +1,56 @@
 package com.w1kt0rx.medicalclinic.model;
 
 import com.w1kt0rx.medicalclinic.command.UpdatePatientCommand;
+
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NaturalId;
 
 @Setter
 @Getter
-@Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Entity
+@Table(name = "Patient")
 public class Patient {
-
-    private String email;
-    private String password;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @EqualsAndHashCode.Include
+    @NaturalId
     private String idCardNo;
-    private String firstName;
-    private String lastName;
-    private String phoneNumber;
     private LocalDate birthday;
+    @OneToOne
+    @JoinColumn(name = "user_id", unique = true)
+    private User user;
+    @OneToMany(mappedBy = "patient")
+    private List<Visit> visits = new ArrayList<>();
 
-    public Patient update(UpdatePatientCommand command) {
-        this.password = command.password();
-        this.idCardNo = command.idCardNo();
-        this.firstName = command.firstName();
-        this.lastName = command.lastName();
-        this.phoneNumber = command.phoneNumber();
-        this.birthday = command.birthday();
-        return this;
+    public void setUser(User user) {
+        this.user = user;
+        if (user != null && user.getPatient() != this) {
+            user.setPatient(this);
+        }
     }
 
-    public void updatePassword(String password) {
-        this.password = password;
+    public void addVisit(Visit visit) {
+        this.visits.add(visit);
+        visit.setPatient(this);
+    }
+
+    public void removeVisit(Visit visit) {
+        this.visits.remove(visit);
+        visit.setPatient(null);
+    }
+
+    public Patient update(UpdatePatientCommand command) {
+        this.idCardNo = command.idCardNo();
+        this.birthday = command.birthday();
+        return this;
     }
 }
