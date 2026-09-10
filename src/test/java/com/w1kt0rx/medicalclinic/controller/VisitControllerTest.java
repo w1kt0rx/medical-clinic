@@ -56,7 +56,7 @@ public class VisitControllerTest {
         LocalDateTime start = LocalDateTime.of(2026, 12, 22, 10, 0);
         LocalDateTime finish = LocalDateTime.of(2026, 12, 22, 11, 0);
         CreateVisitCommand command = new CreateVisitCommand(1L, start, finish);
-        VisitDto visitDto = new VisitDto(1L, start, doctorDto, null);
+        VisitDto visitDto = new VisitDto(1L, start, finish, doctorDto, null);
         ArgumentCaptor<CreateVisitCommand> commandCaptor = ArgumentCaptor.forClass(CreateVisitCommand.class);
         when(visitService.create(any(CreateVisitCommand.class))).thenReturn(visitDto);
         //when + then
@@ -123,7 +123,7 @@ public class VisitControllerTest {
         DoctorDto doctorDto = new DoctorDto(1L, "Kardiolog", userDto, Set.of());
         PatientDto patientDto = new PatientDto(1L, "123123", LocalDate.of(1990, 1, 1), userDto);
         RegisterPatientForVisitCommand command = new RegisterPatientForVisitCommand(1L);
-        VisitDto visitDto = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), doctorDto, patientDto);
+        VisitDto visitDto = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctorDto, patientDto);
         ArgumentCaptor<Long> idCaptor = ArgumentCaptor.forClass(Long.class);
         ArgumentCaptor<RegisterPatientForVisitCommand> commandCaptor = ArgumentCaptor.forClass(RegisterPatientForVisitCommand.class);
         when(visitService.registerPatient(anyLong(), any(RegisterPatientForVisitCommand.class))).thenReturn(visitDto);
@@ -187,7 +187,7 @@ public class VisitControllerTest {
         //given
         UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
         DoctorDto doctorDto = new DoctorDto(1L, "Kardiolog", userDto, Set.of());
-        VisitDto visitDto = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), doctorDto, null);
+        VisitDto visitDto = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctorDto, null);
         ArgumentCaptor<Long> idCaptor = ArgumentCaptor.forClass(Long.class);
         when(visitService.findById(1L)).thenReturn(visitDto);
         //when + then
@@ -234,8 +234,8 @@ public class VisitControllerTest {
         //given
         UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
         DoctorDto doctorDto = new DoctorDto(1L, "Kardiolog", userDto, Set.of());
-        VisitDto visit1 = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), doctorDto, null);
-        VisitDto visit2 = new VisitDto(2L, LocalDateTime.of(2026, 12, 23, 10, 0), doctorDto, null);
+        VisitDto visit1 = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctorDto, null);
+        VisitDto visit2 = new VisitDto(2L, LocalDateTime.of(2026, 12, 23, 10, 0), LocalDateTime.of(2026, 12, 23, 11, 0), doctorDto, null);
         Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
         PageDto<VisitDto> page = PageDto.from(new PageImpl<>(List.of(visit1, visit2), pageable, 2));
         ArgumentCaptor<PageRequestDto> dtoCaptor = ArgumentCaptor.forClass(PageRequestDto.class);
@@ -259,7 +259,7 @@ public class VisitControllerTest {
         //given
         UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
         DoctorDto doctorDto = new DoctorDto(1L, "Kardiolog", userDto, Set.of());
-        VisitDto visit = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), doctorDto, null);
+        VisitDto visit = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctorDto, null);
         Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
         PageDto<VisitDto> page = PageDto.from(new PageImpl<>(List.of(visit), pageable, 1));
         ArgumentCaptor<PageRequestDto> dtoCaptor = ArgumentCaptor.forClass(PageRequestDto.class);
@@ -278,7 +278,7 @@ public class VisitControllerTest {
         UserDto userDto = new UserDto(1L, "example@email.com", "John", "Surname", "123123123");
         DoctorDto doctorDto = new DoctorDto(1L, "Kardiolog", userDto, Set.of());
         PatientDto patientDto = new PatientDto(1L, "123123", LocalDate.of(1990, 1, 1), userDto);
-        VisitDto visitDto = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), doctorDto, patientDto);
+        VisitDto visitDto = new VisitDto(1L, LocalDateTime.of(2026, 12, 22, 10, 0), LocalDateTime.of(2026, 12, 22, 11, 0), doctorDto, patientDto);
         Pageable pageable = PageRequest.of(0, 20, Sort.by("id"));
         PageDto<VisitDto> page = PageDto.from(new PageImpl<>(List.of(visitDto), pageable, 1));
         ArgumentCaptor<Long> patientIdCaptor = ArgumentCaptor.forClass(Long.class);

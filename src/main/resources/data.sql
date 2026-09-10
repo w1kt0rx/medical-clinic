@@ -1,6 +1,7 @@
--- USERS
+-- USERS (30 rekordow: 10 pacjentow + 20 lekarzy)
 INSERT INTO users (id, email, password, first_name, last_name, phone_number)
 VALUES
+    -- Pacjenci (1-10)
     (1, 'jan.kowalski@gmail.com', 'haslo1', 'Jan', 'Kowalski', '500111222'),
     (2, 'anna.nowak@gmail.com', 'haslo2', 'Anna', 'Nowak', '500222333'),
     (3, 'piotr.zielinski@gmail.com', 'haslo3', 'Piotr', 'Zielinski', '500333444'),
@@ -11,6 +12,7 @@ VALUES
     (8, 'agnieszka.adamczyk@gmail.com', 'haslo8', 'Agnieszka', 'Adamczyk', '500888999'),
     (9, 'pawel.dudek@gmail.com', 'haslo9', 'Pawel', 'Dudek', '500999000'),
     (10, 'karolina.zajac@gmail.com', 'haslo10', 'Karolina', 'Zajac', '500101010'),
+    -- Lekarze (11-30)
     (11, 'adam.wisniewski@medico.pl', 'haslo11', 'Adam', 'Wisniewski', '600111222'),
     (12, 'ewa.kaminska@zdrowie.pl', 'haslo12', 'Ewa', 'Kaminska', '600222333'),
     (13, 'marek.lewandowski@med.pl', 'haslo13', 'Marek', 'Lewandowski', '600333444'),
@@ -20,11 +22,21 @@ VALUES
     (17, 'lukasz.kozlowski@medico.pl', 'haslo17', 'Lukasz', 'Kozlowski', '600777888'),
     (18, 'magdalena.jankowska@zdrowie.pl', 'haslo18', 'Magdalena', 'Jankowska', '600888999'),
     (19, 'marcin.wojciechowski@med.pl', 'haslo19', 'Marcin', 'Wojciechowski', '600999000'),
-    (20, 'elzbieta.kwiatkowska@medico.pl', 'haslo20', 'Elzbieta', 'Kwiatkowska', '600101010');
+    (20, 'elzbieta.kwiatkowska@medico.pl', 'haslo20', 'Elzbieta', 'Kwiatkowska', '600101010'),
+    (21, 'robert.zielinski@medico.pl', 'haslo21', 'Robert', 'Zielinski', '600111333'),
+    (22, 'aleksandra.wojcik@zdrowie.pl', 'haslo22', 'Aleksandra', 'Wojcik', '600222444'),
+    (23, 'grzegorz.mazur@med.pl', 'haslo23', 'Grzegorz', 'Mazur', '600333555'),
+    (24, 'monika.krawczyk@zdrowie.pl', 'haslo24', 'Monika', 'Krawczyk', '600444666'),
+    (25, 'szymon.kaczmarek@med.pl', 'haslo25', 'Szymon', 'Kaczmarek', '600555777'),
+    (26, 'natalia.adamczyk@medico.pl', 'haslo26', 'Natalia', 'Adamczyk', '600666888'),
+    (27, 'jakub.dudek@medico.pl', 'haslo27', 'Jakub', 'Dudek', '600777999'),
+    (28, 'dorota.zajac@zdrowie.pl', 'haslo28', 'Dorota', 'Zajac', '600888000'),
+    (29, 'kamil.nowak@med.pl', 'haslo29', 'Kamil', 'Nowak', '600999111'),
+    (30, 'alicja.kowalska@medico.pl', 'haslo30', 'Alicja', 'Kowalska', '600101222');
 
 -------------------------------------------------------
 
--- PATIENTS (20 rekordow)
+-- PATIENTS (20 rekordow - spiete z user_id 1-20)
 INSERT INTO patient (id, id_card_no, birthday, user_id)
 VALUES
     (1, 'ABC123456', '1998-05-20', 1),
@@ -37,16 +49,16 @@ VALUES
     (8, 'STU258369', '1980-04-18', 8),
     (9, 'VWX369147', '1967-08-12', 9),
     (10, 'YZA951753', '1999-10-05', 10),
-    (11, 'BCD852963', '1990-02-28', 1),
-    (12, 'EFG741852', '1988-06-14', 2),
-    (13, 'HIJ963852', '1975-11-25', 3),
-    (14, 'KLM159357', '2000-03-08', 4),
-    (15, 'NOP357951', '1982-05-17', 5),
-    (16, 'QRS486259', '1994-09-02', 6),
-    (17, 'TUV753159', '2002-12-19', 7),
-    (18, 'WXY159487', '1970-07-11', 8),
-    (19, 'ZAB357159', '1996-04-23', 9),
-    (20, 'CDE951357', '1989-01-31', 10);
+    (11, 'BCD852963', '1990-02-28', 11),
+    (12, 'EFG741852', '1988-06-14', 12),
+    (13, 'HIJ963852', '1975-11-25', 13),
+    (14, 'KLM159357', '2000-03-08', 14),
+    (15, 'NOP357951', '1982-05-17', 15),
+    (16, 'QRS486259', '1994-09-02', 16),
+    (17, 'TUV753159', '2002-12-19', 17),
+    (18, 'WXY159487', '1970-07-11', 18),
+    (19, 'ZAB357159', '1996-04-23', 19),
+    (20, 'CDE951357', '1989-01-31', 20);
 
 -------------------------------------------------------
 
@@ -102,7 +114,7 @@ VALUES
 
 -------------------------------------------------------
 
--- DOCTORS (20 rekordow)
+-- DOCTORS (20 rekordow - spiete z user_id 11-30)
 INSERT INTO doctor (id, specialization, user_id)
 VALUES
     (1, 'Kardiolog', 11),
@@ -115,16 +127,16 @@ VALUES
     (8, 'Ginekolog', 18),
     (9, 'Endokrynolog', 19),
     (10, 'Psychiatra', 20),
-    (11, 'Chirurg', 11),
-    (12, 'Internista', 12),
-    (13, 'Urolog', 13),
-    (14, 'Gastroenterolog', 14),
-    (15, 'Onkolog', 15),
-    (16, 'Reumatolog', 16),
-    (17, 'Pulmonolog', 17),
-    (18, 'Alergolog', 18),
-    (19, 'Nefrolog', 19),
-    (20, 'Diabetolog', 20);
+    (11, 'Chirurg', 21),
+    (12, 'Internista', 22),
+    (13, 'Urolog', 23),
+    (14, 'Gastroenterolog', 24),
+    (15, 'Onkolog', 25),
+    (16, 'Reumatolog', 26),
+    (17, 'Pulmonolog', 27),
+    (18, 'Alergolog', 28),
+    (19, 'Nefrolog', 29),
+    (20, 'Diabetolog', 30);
 
 -------------------------------------------------------
 

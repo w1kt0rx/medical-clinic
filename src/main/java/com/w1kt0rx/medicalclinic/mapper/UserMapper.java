@@ -11,6 +11,8 @@ public interface UserMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "patient", ignore = true)
     @Mapping(target = "doctor", ignore = true)
+    @Mapping(target = "update", ignore = true)
+    @Mapping(target = "updatePassword", ignore = true)
     User toEntity(CreateUserCommand command);
 
     UserDto toDto(User user);

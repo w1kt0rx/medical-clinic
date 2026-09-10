@@ -3,7 +3,6 @@ package com.w1kt0rx.medicalclinic.model;
 import com.w1kt0rx.medicalclinic.command.UpdateClinicCommand;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.NaturalId;
 
 import java.util.HashSet;
 import java.util.Set;

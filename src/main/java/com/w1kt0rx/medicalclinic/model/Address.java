@@ -4,14 +4,12 @@ import com.w1kt0rx.medicalclinic.command.UpdateClinicCommand;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.Objects;
-
 @Setter
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "Address")
+@Table(name = "address")
 public class Address {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -4,7 +4,8 @@ import java.time.LocalDateTime;
 
 public record VisitDto(
         Long id,
-        LocalDateTime visitDate,
+        LocalDateTime startDate,
+        LocalDateTime finishDate,
         DoctorDto doctor,
         PatientDto patient
 ) {

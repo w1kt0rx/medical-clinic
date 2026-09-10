@@ -13,6 +13,7 @@ public interface PatientMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "visits", ignore = true)
+    @Mapping(target = "update", ignore = true)
     Patient toEntity(CreatePatientCommand command);
 
     PatientDto toDto(Patient patient);

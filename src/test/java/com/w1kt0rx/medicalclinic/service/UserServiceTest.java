@@ -72,7 +72,7 @@ public class UserServiceTest {
         //when + then
         EmailAlreadyInUseException ex = Assertions.assertThrows(EmailAlreadyInUseException.class, () -> userService.create(command));
         Assertions.assertAll(
-                () -> Assertions.assertEquals("Email - example@email.com - jest już w uzyciu", ex.getMessage()),
+                () -> Assertions.assertEquals("Email - example@email.com - is already used", ex.getMessage()),
                 () -> Assertions.assertEquals(org.springframework.http.HttpStatus.CONFLICT, ex.getHttpStatus())
         );
         Mockito.verify(userRepository, Mockito.never()).save(any());
